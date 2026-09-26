@@ -1,16 +1,11 @@
 package com.nowcent.ham.rndebug.module
 
-import android.util.Log
-import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.bridge.ReactContextBaseJavaModule
-import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableArray
-import com.facebook.react.bridge.ReadableMap
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.bridge.WritableNativeMap
-import com.facebook.react.module.annotations.ReactModule
 import com.nowcent.ham.rn.nativemodule.NativeEducationModuleSpec
+import java.util.Calendar
 
 /**
  * @author orangeboyChen
@@ -25,24 +20,26 @@ class RNEducationModule(reactContext: ReactApplicationContext) :
         courseGridEntity: ReadableArray?,
         errorMessage: String?
     ) {
-        Log.i(
-            "RNEducationModule",
-            "onGetCourseList: courseList=$courseList, errorMessage=$errorMessage"
-        )
+        // Course data is delivered to the React layer and is never logged.
     }
 
     override fun getCourseConfig(): WritableMap {
-        Log.i("RNEducationModule", "getCourseConfig")
+        val calendar = Calendar.getInstance()
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH) + 1
+        val academicYear = if (month >= 8) year else year - 1
+        val semester = if (month >= 8) 1 else 2
         return WritableNativeMap().apply {
-            putInt("year", 2026)
-            putInt("semester", 1)
+            putInt("year", academicYear)
+            putInt("semester", semester)
         }
     }
 
-    override fun onGetScoreList(scoreListStr: String, userInfoStr: String, errorMessage: String?) {
-        Log.i(
-            "RNEducationModule",
-            "onGetScoreList: scoreListStr=$scoreListStr, userInfoStr=$userInfoStr, errorMessage=$errorMessage"
-        )
+    override fun onGetScoreList(
+        scoreListStr: String,
+        userInfoStr: String,
+        errorMessage: String?
+    ) {
+        // Score data is delivered to the React layer and is never logged.
     }
 }

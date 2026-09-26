@@ -1,4 +1,3 @@
 <resources>
-    <string name="app_name">HamRNDebug</string>
-    <string moduleConfig="true" name="CodePushDeploymentKey">IbyQ1jO4xMovH_NhrOIgJJd3vTUYpdpbRLhDz</string>
+    <string name="app_name">Ham RN</string>
 </resources>

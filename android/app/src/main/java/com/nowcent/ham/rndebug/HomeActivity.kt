@@ -39,7 +39,11 @@ class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            HomeView()
+            if (BuildConfig.DEBUG) {
+                HomeView()
+            } else {
+                RNContainer("Ham", Modifier.fillMaxSize())
+            }
         }
     }
 }

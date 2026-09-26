@@ -7,6 +7,23 @@
 #define TIMEOUT_SECONDS 600
 #define TEXT_TO_LOOK_FOR @"home-title"
 
+// The window belongs to SceneDelegate, not to the app delegate, because the
+// UIScene lifecycle moved window creation out of application:didFinishLaunching.
+static UIWindow *HamKeyWindow(void)
+{
+  for (UIScene *scene in RCTSharedApplication().connectedScenes) {
+    if (![scene isKindOfClass:UIWindowScene.class]) {
+      continue;
+    }
+    for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+      if (window.isKeyWindow) {
+        return window;
+      }
+    }
+  }
+  return nil;
+}
+
 @interface ham_rnTests : XCTestCase
 
 @end
@@ -28,7 +45,9 @@
 
 - (void)testRendersStandaloneHomeScreen
 {
-  UIViewController *vc = [[[RCTSharedApplication() delegate] window] rootViewController];
+  UIWindow *window = HamKeyWindow();
+  XCTAssertNotNil(window, @"No key window: the scene never connected a view controller.");
+  UIViewController *vc = window.rootViewController;
   NSDate *date = [NSDate dateWithTimeIntervalSinceNow:TIMEOUT_SECONDS];
   BOOL foundElement = NO;
 

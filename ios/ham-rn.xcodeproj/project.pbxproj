@@ -12,6 +12,7 @@
 		EA7C0A012FAE000000000008 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EA7C0A012FAE000000000009 /* Security.framework */; };
 		EA7C0A012FAE00000000000A /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EA7C0A012FAE00000000000B /* WebKit.framework */; };
 		13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.mm */; };
+		EA7C0A012FAE000200000001 /* SceneDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = EA7C0A012FAE000200000003 /* SceneDelegate.mm */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		7699B88040F8A987B510C191 /* libPods-ham-rn-ham-rnTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 19F6CBCC0A4E27FBF8BF4A61 /* libPods-ham-rn-ham-rnTests.a */; };
@@ -42,6 +43,8 @@
 		13B07F961A680F5B00A75B9A /* Ham.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ham.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FAF1A68108700A75B9A /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AppDelegate.h; path = "ham-rn/AppDelegate.h"; sourceTree = "<group>"; };
 		13B07FB01A68108700A75B9A /* AppDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AppDelegate.mm; path = "ham-rn/AppDelegate.mm"; sourceTree = "<group>"; };
+		EA7C0A012FAE000200000002 /* SceneDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SceneDelegate.h; path = "ham-rn/SceneDelegate.h"; sourceTree = "<group>"; };
+		EA7C0A012FAE000200000003 /* SceneDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = SceneDelegate.mm; path = "ham-rn/SceneDelegate.mm"; sourceTree = "<group>"; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = "ham-rn/Images.xcassets"; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = "ham-rn/Info.plist"; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = "ham-rn/main.m"; sourceTree = "<group>"; };
@@ -115,6 +118,8 @@
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB71A68108700A75B9A /* main.m */,
 				865DD36AB2F25F109E8FE74F /* PrivacyInfo.xcprivacy */,
+				EA7C0A012FAE000200000002 /* SceneDelegate.h */,
+				EA7C0A012FAE000200000003 /* SceneDelegate.mm */,
 				EA6C0AED2F9F14C300FF3511 /* ham-rn-Bridging-Header.h */,
 				EA7C0A012FAE000000000001 /* RNNativeCasMobileLoginModule.mm */,
 				EA7C0A012FAE000000000002 /* RNNativeCasModule.mm */,
@@ -428,6 +433,7 @@
 			files = (
 				13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */,
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
+				EA7C0A012FAE000200000001 /* SceneDelegate.mm in Sources */,
 				EA7C0A012FAE000100000001 /* RNNativeCasMobileLoginModule.mm in Sources */,
 				EA7C0A012FAE000100000002 /* RNNativeCasModule.mm in Sources */,
 				EA7C0A012FAE000100000003 /* RNNativeCommonModule.mm in Sources */,

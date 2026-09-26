@@ -20,7 +20,7 @@ RCT_EXPORT_MODULE(NativeCasModule)
   }
   dispatch_async(dispatch_get_main_queue(), ^{
     [WKWebsiteDataStore.defaultDataStore.httpCookieStore
-      deleteAllCookiesWithCompletionHandler:^{
+      deleteAllCookies:^{
         resolve(@(keychainCleared));
       }];
   });

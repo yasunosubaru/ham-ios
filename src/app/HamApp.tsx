@@ -15,10 +15,11 @@ import {useColor} from '@/utils/color/color';
 import CourseScreen from '@/app/CourseScreen';
 import GpaCalculatorScreen from '@/app/GpaCalculatorScreen';
 import ScoreScreen from '@/app/ScoreScreen';
+import WeatherScreen from '@/app/WeatherScreen';
 import CasModule from '@/modules/NativeCasModule';
 import NativeCommonModule from '@/modules/NativeCommonModule';
 
-type AppRoute = 'home' | 'courses' | 'scores' | 'calculator';
+type AppRoute = 'home' | 'courses' | 'scores' | 'calculator' | 'weather';
 
 interface HamAppProps {
   appVersion?: string;
@@ -81,6 +82,14 @@ const HomeScreen = ({
     testID: string;
     title: string;
   }> = [
+    {
+      // First because it is the one card that works before anyone logs in:
+      // the endpoint is a public API with no account behind it.
+      description: t('app.home.weather_description'),
+      route: 'weather',
+      testID: 'weather',
+      title: t('app.home.weather_title'),
+    },
     {
       description: t('app.home.courses_description'),
       route: 'courses',
@@ -250,6 +259,8 @@ const HamApp = ({appVersion, buildNumber}: HamAppProps): React.JSX.Element => {
         return <ScoreScreen onBack={() => setRoute('home')} />;
       case 'calculator':
         return <GpaCalculatorScreen onBack={() => setRoute('home')} />;
+      case 'weather':
+        return <WeatherScreen onBack={() => setRoute('home')} />;
       case 'home':
       default:
         return (

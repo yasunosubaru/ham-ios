@@ -31,3 +31,14 @@ tags:
     id: calculator-add-course
 - assertVisible:
     id: calculator-course-name
+- tapOn:
+    id: back-button
+
+# Weather is the one card that needs no login, so it has to be reachable on a
+# cleared state. Only the header is asserted: the screen fills in from a network
+# call, and a smoke run that fails because the weather API is slow is testing
+# the network, not the app.
+- tapOn:
+    id: weather
+- assertVisible:
+    id: back-button

@@ -58,7 +58,9 @@
       "courses_description": "View courses and class times by term",
       "courses_title": "Course schedule",
       "scores_description": "View scores and credit totals",
-      "scores_title": "Scores"
+      "scores_title": "Scores",
+      "weather_description": "Live weather and forecast for campus, no sign-in needed",
+      "weather_title": "Campus weather"
     },
     "language": "Language",
     "loading": "Loading",
@@ -97,7 +99,35 @@
     "weekday_5": "Friday",
     "weekday_6": "Saturday",
     "weekday_7": "Sunday",
-    "version": "Version {{version}} ({{build}})"
+    "version": "Version {{version}} ({{build}})",
+    "weather": {
+      "condition_clear": "Clear",
+      "condition_drizzle": "Drizzle",
+      "condition_fog": "Fog",
+      "condition_mainlyClear": "Mainly clear",
+      "condition_overcast": "Overcast",
+      "condition_partlyCloudy": "Partly cloudy",
+      "condition_rain": "Rain",
+      "condition_snow": "Snow",
+      "condition_thunderstorm": "Thunderstorm",
+      "condition_unknown": "Unknown",
+      "description": "Live conditions and the next few days for Luojia Mountain campus, from the public Open-Meteo API. No sign-in required.",
+      "feels_like": "Feels like",
+      "forecast": "Next few days",
+      "humidity": "Humidity",
+      "millimetre_value": "{{value}} mm",
+      "percent_value": "{{value}}%",
+      "precipitation": "Precipitation",
+      "rain_chance": "{{value}}% chance of rain",
+      "range_value": "{{min}}° to {{max}}°",
+      "refresh": "Refresh weather",
+      "source": "Weather data from Open-Meteo (open-meteo.com), queried for the Luojia Mountain campus coordinates.",
+      "speed_value": "{{value}} km/h",
+      "temperature_value": "{{value}}°C",
+      "title": "Campus weather",
+      "today": "Today",
+      "wind": "Wind"
+    }
   },
   "common": {
     "contact_author": "Please contact the script author",

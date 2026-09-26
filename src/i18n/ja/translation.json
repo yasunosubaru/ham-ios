@@ -58,7 +58,9 @@
       "courses_description": "学期ごとに授業と授業時間を確認",
       "courses_title": "時間割",
       "scores_description": "成績と単位の集計を確認",
-      "scores_title": "成績"
+      "scores_title": "成績",
+      "weather_description": "キャンパスの天気と予報を、ログインなしで確認",
+      "weather_title": "キャンパス天気"
     },
     "language": "言語",
     "loading": "読み込み中",
@@ -97,7 +99,35 @@
     "weekday_5": "金曜日",
     "weekday_6": "土曜日",
     "weekday_7": "日曜日",
-    "version": "バージョン {{version}} ({{build}})"
+    "version": "バージョン {{version}} ({{build}})",
+    "weather": {
+      "condition_clear": "晴れ",
+      "condition_drizzle": "霧雨",
+      "condition_fog": "霧",
+      "condition_mainlyClear": "晴れ時々雲",
+      "condition_overcast": "曇り",
+      "condition_partlyCloudy": "晴れ時々曇り",
+      "condition_rain": "雨",
+      "condition_snow": "雪",
+      "condition_thunderstorm": "雷雨",
+      "condition_unknown": "不明",
+      "description": "珞珈山キャンパスの現在の天気と今後の予報。公開されている Open-Meteo API を使うため、ログインは不要です。",
+      "feels_like": "体感温度",
+      "forecast": "今後の予報",
+      "humidity": "湿度",
+      "millimetre_value": "{{value}} mm",
+      "percent_value": "{{value}}%",
+      "precipitation": "降水量",
+      "rain_chance": "降水確率 {{value}}%",
+      "range_value": "{{min}}° ~ {{max}}°",
+      "refresh": "天気を更新",
+      "source": "天気データは Open-Meteo（open-meteo.com）から、珞珈山キャンパスの座標で取得しています。",
+      "speed_value": "{{value}} km/h",
+      "temperature_value": "{{value}}°C",
+      "title": "キャンパス天気",
+      "today": "今日",
+      "wind": "風速"
+    }
   },
   "common": {
     "contact_author": "スクリプトの作者に連絡してください",

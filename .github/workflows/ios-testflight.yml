@@ -43,12 +43,27 @@ jobs:
       RELEASE_NOTES: ${{ inputs.release_notes }}
       HUSKY: '0'
       FASTLANE_SKIP_UPDATE_CHECK: '1'
+      # Keep this in step with ios-build.yml and e2e.yml: an archive built by
+      # one Xcode has to be reproducible by the same Xcode, not by whatever the
+      # runner image happens to default to that week.
+      XCODE_VERSION: '16.4'
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          developer_dir="/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
+          if [ ! -d "$developer_dir" ]; then
+            echo "::error::Xcode ${XCODE_VERSION} is not on this runner image. Bump XCODE_VERSION in this workflow." >&2
+            ls -1 /Applications | grep -i xcode >&2 || true
+            exit 1
+          fi
+          sudo xcode-select -s "$developer_dir"
 
       - name: Record Xcode version
         id: xcode

@@ -21,6 +21,9 @@ env:
   # where /dev/kvm gives the emulator hardware acceleration. See the android
   # job below.
   MAESTRO_VERSION: '2.10.0'
+  # Same pin as ios-build.yml and ios-testflight.yml, so the simulator build
+  # that Maestro drives is the one the compile checks cover.
+  XCODE_VERSION: '16.4'
 
 jobs:
   # Both jobs run once per PR and both gate the merge. They were non-blocking
@@ -38,6 +41,16 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          developer_dir="/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
+          if [ ! -d "$developer_dir" ]; then
+            echo "::error::Xcode ${XCODE_VERSION} is not on this runner image. Bump XCODE_VERSION in this workflow." >&2
+            ls -1 /Applications | grep -i xcode >&2 || true
+            exit 1
+          fi
+          sudo xcode-select -s "$developer_dir"
       - name: Record Xcode version
         id: xcode
         run: |

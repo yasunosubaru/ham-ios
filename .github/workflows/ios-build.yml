@@ -14,12 +14,28 @@ concurrency:
 
 env:
   HUSKY: '0'
+  # macos-15 ships several Xcode versions and changes which one is selected by
+  # default whenever the image is updated, so an unpinned build stops
+  # reproducing without any change to this repository. 16.4 is what the image
+  # defaults to today and sits above the Xcode 16.1 floor that React Native 0.87
+  # requires. Bump this together with a deliberate toolchain change.
+  XCODE_VERSION: '16.4'
 
 jobs:
   ios-build:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          developer_dir="/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
+          if [ ! -d "$developer_dir" ]; then
+            echo "::error::Xcode ${XCODE_VERSION} is not on this runner image. Bump XCODE_VERSION in this workflow." >&2
+            ls -1 /Applications | grep -i xcode >&2 || true
+            exit 1
+          fi
+          sudo xcode-select -s "$developer_dir"
       - name: Record Xcode version
         id: xcode
         run: |
@@ -90,6 +106,24 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             build \
             ONLY_ACTIVE_ARCH=YES \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+      # Everything above builds against iphonesimulator, but TestFlight packages
+      # the device SDK. A simulator-only build never compiles the arm64 slices
+      # and never exercises the device-only parts of the configuration, so add
+      # one unsigned device build. CODE_SIGNING_ALLOWED=NO keeps it a pure
+      # compile check: nothing is signed, archived for upload, or distributed.
+      - name: Build iOS Release for device (unsigned)
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -workspace ham-rn.xcworkspace \
+            -scheme ham-rn \
+            -sdk iphoneos \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY=""

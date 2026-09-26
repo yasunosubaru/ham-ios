@@ -42,10 +42,15 @@ jobs:
         id: xcode
         run: |
           set -euo pipefail
-          version="$(xcodebuild -version | head -n 1)"
+          # Read the whole output before slicing it. Piping xcodebuild straight
+          # into `head` closes the pipe after the first line, and current Xcode
+          # releases then abort with an uncaught NSFileHandle broken-pipe
+          # exception, which `set -o pipefail` turns into a failed step.
+          xcode_version="$(xcodebuild -version)"
+          printf '%s\n' "$xcode_version"
+          version="${xcode_version%%$'\n'*}"
           test -n "$version"
-          echo "version=$version" | tr ' ' '-' >> "$GITHUB_OUTPUT"
-          xcodebuild -version
+          echo "version=${version// /-}" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
         with:
           node-version: 22

@@ -19,8 +19,13 @@ RCT_EXPORT_MODULE(NativeCasModule)
     [NSHTTPCookieStorage.sharedHTTPCookieStorage deleteCookie:cookie];
   }
   dispatch_async(dispatch_get_main_queue(), ^{
-    [WKWebsiteDataStore.defaultDataStore.httpCookieStore
-      deleteAllCookies:^{
+    // WKHTTPCookieStore only deletes one cookie at a time and has no bulk
+    // delete method, so clear the whole cookie data type through the website
+    // data store instead.
+    [WKWebsiteDataStore.defaultDataStore
+      removeDataOfTypes:[NSSet setWithObject:WKWebsiteDataTypeCookies]
+      modifiedSince:[NSDate dateWithTimeIntervalSince1970:0]
+      completionHandler:^{
         resolve(@(keychainCleared));
       }];
   });

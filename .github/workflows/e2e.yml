@@ -165,6 +165,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Reclaim space before anything large lands on disk.
+      #
+      # `reactivecircus/android-emulator-runner` downloads a ~1.5GB system
+      # image at step time, on top of the Gradle build that runs before it, and
+      # a hosted runner does not have room for all three. When that happens the
+      # job fails while *preparing the SDK package*, before Maestro ever starts:
+      #
+      #   Warning: An error occurred while preparing SDK package Google APIs
+      #   Intel x86_64 Atom System Image: No space left on device.
+      #
+      # That reads like a broken emulator image rather than a full disk, so it
+      # is worth deleting what this job cannot use up front. Deliberately kept
+      # to toolchains this app has no use for — .NET, GHC, the Android NDK, and
+      # the preinstalled emulator. `$AGENT_TOOLSDIRECTORY` is left alone: that
+      # is where the JDK, Gradle and Node this job needs live.
+      - name: Free disk space
+        run: |
+          set -euo pipefail
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost
+          sudo rm -rf /usr/local/lib/android/sdk/ndk
+          sudo rm -rf /usr/local/lib/android/sdk/emulator
+          df -h /
+
       # Grant the runner user access to /dev/kvm so the emulator can use
       # hardware acceleration. Must run before the emulator starts.
       - name: Enable KVM group perms

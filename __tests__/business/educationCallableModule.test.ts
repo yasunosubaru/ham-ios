@@ -95,7 +95,7 @@ describe('educationCallableModule.updateCourseList', () => {
     );
   });
 
-  it('logs the courses it could not parse, having no UI to ask in', async () => {
+  it('records only a count for courses it could not parse', async () => {
     const kept = {name: '高等数学', courseId: 'MATH001'};
     const dropped = {name: '线性代数', courseId: 'MATH002'};
     (getCourseList as jest.Mock).mockResolvedValue([
@@ -111,9 +111,13 @@ describe('educationCallableModule.updateCourseList', () => {
 
     await educationCallableModule.updateCourseList(2026, 1);
 
-    // This entry point runs headless, so it imports what parsed and records
-    // the rest rather than leaving them silently missing.
+    // This entry point runs headless, so it records a count without writing
+    // private course names to the log.
     expect(Log.e).toHaveBeenCalledWith(
+      'updateCourseList',
+      'ignored 1 unparsable course(s)',
+    );
+    expect(Log.e).not.toHaveBeenCalledWith(
       'updateCourseList',
       expect.stringContaining('线性代数'),
     );

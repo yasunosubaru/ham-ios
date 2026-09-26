@@ -1,5 +1,6 @@
 import {parseResponse} from './parser';
-import {logChunked, requestPost} from '@/utils/request/request';
+import {requestPost} from '@/utils/request/request';
+import CasModule from '@/modules/NativeCasModule';
 
 /**
  * @author orangeboyChen
@@ -40,13 +41,10 @@ const getCourseList = async ({
     url: `https://jwgl.whu.edu.cn/kbcx/xskbcx_cxXsgrkb.html?${params}`,
     body: body.toString(),
     contentType: 'application/x-www-form-urlencoded',
+    headers: {Cookie: CasModule.requestCasCookie()},
   });
   const rawStr = await response.text();
   const str = rawStr.replaceAll(' ', '');
-  // A full-semester timetable runs past the 16KB buffer xlog formats into,
-  // and an oversized entry is dropped whole — so this is where the response
-  // used to go missing. Split it the way the request layer does.
-  logChunked('i', 'response', str, 'getCourseList');
   const json = JSON.parse(str);
   return parseResponse({
     json,

@@ -13,6 +13,8 @@ import {CasReAuthLoginError} from '@/business/education/api';
 import {useTranslation} from 'react-i18next';
 import {useColor} from '@/utils/color/color';
 import {ReAuthLoginView} from '@/components/cas/ReAuthLoginView';
+import CasModule from '@/modules/NativeCasModule';
+import {requestGet} from '@/utils/request/request';
 
 export enum EducationStage {
   TRY_GET_INFO_DIRECTLY,
@@ -57,7 +59,7 @@ const FetchEducationView = ({
       // error carrying a circular reference, and a throw here — inside the only
       // handler for this rejection — would leave the host waiting on a callback
       // that never comes, with the screen on loading the whole time.
-      Log.e(tag, `doFetch - error! err=${describeError(err)}`);
+      Log.e(tag, 'doFetch failed');
       if (err instanceof CasReAuthLoginError) {
         setReAuthUrl(err.url);
         setStage(EducationStage.REAUTH_LOGIN);
@@ -73,14 +75,17 @@ const FetchEducationView = ({
         testID={testID ? `${testID}-reauth` : undefined}
         reAuthUrl={reAuthUrl}
         onGetTicketUrl={ticketUrl => {
-          fetch(ticketUrl)
+          requestGet({
+            headers: {Cookie: CasModule.requestCasCookie()},
+            url: ticketUrl,
+          })
             .then(() => {
               doFetch().catch((err: unknown) => {
                 onError(describeError(err));
               });
             })
             .catch((err: unknown) => {
-              Log.e(tag, `fetch ticketUrl - error! err=${describeError(err)}`);
+              Log.e(tag, 'ticket redemption failed');
               onError(describeError(err));
             });
           setStage(EducationStage.LOAD_EDUCATION);

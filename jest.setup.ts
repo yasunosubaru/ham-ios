@@ -54,12 +54,15 @@ jest.mock('@/modules/NativeCommonModule', () => {
 
 jest.mock('@/modules/NativeCasModule', () => ({
   __esModule: true,
-  default: {requestCasCookie: jest.fn(() => '')},
+  default: {
+    clearCasCookie: jest.fn(() => Promise.resolve(true)),
+    requestCasCookie: jest.fn(() => ''),
+  },
 }));
 
 jest.mock('@/modules/NativeCasMobileLoginModule', () => ({
   __esModule: true,
-  default: {onRequestSuccess: jest.fn()},
+  default: {onLoginSuccess: jest.fn(() => Promise.resolve(true))},
 }));
 
 jest.mock('@/modules/NativeEducationModule', () => ({

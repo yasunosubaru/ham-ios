@@ -1,10 +1,11 @@
 import {parseResponse} from './parser';
-import {logChunked, requestGet, requestPost} from '@/utils/request/request';
+import {requestGet, requestPost} from '@/utils/request/request';
 // @ts-ignore
 import {load as cheerioLoad} from 'cheerio/dist/browser';
 import {getCourseList} from '@/business/education/course';
 import EducationModule from '@/modules/NativeEducationModule';
 import {generateValidate} from '@/business/education/api';
+import CasModule from '@/modules/NativeCasModule';
 
 /**
  * @author orangeboyChen
@@ -36,6 +37,7 @@ const getUserInfo = async (): Promise<UserInfo> => {
   const response = await requestGet({
     url: 'https://jwgl.whu.edu.cn/xtgl/index_cxYhxxIndex.html?xt=jw&localeKey=zh_CN&_=1769360780967&gnmkdm=index',
     headers: {
+      Cookie: CasModule.requestCasCookie(),
       Host: 'jwgl.whu.edu.cn',
     },
   });
@@ -90,15 +92,13 @@ const getScoreList = async ({
     url: `https://jwgl.whu.edu.cn/cjcx/cjcx_cxXsgrcj.html?${query}`,
     body: body.toString(),
     headers: {
+      Cookie: CasModule.requestCasCookie(),
       Host: 'jwgl.whu.edu.cn',
     },
     contentType: 'application/x-www-form-urlencoded',
   });
   const rawStr = await response.text();
   const str = rawStr.replaceAll(' ', '');
-  // A full score history runs past the 16KB buffer xlog formats into, and
-  // an oversized entry is dropped whole. Split it like the request layer.
-  logChunked('i', 'response', str, 'getScoreList');
   const json = JSON.parse(str);
   return parseResponse({json});
 };

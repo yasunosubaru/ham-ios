@@ -1,4 +1,9 @@
-import {chunk, requestGet, requestPost} from '@/utils/request/request';
+import {
+  chunk,
+  redactSensitiveText,
+  requestGet,
+  requestPost,
+} from '@/utils/request/request';
 import Log from '@/modules/NativeLog';
 
 const mockLog = Log as jest.Mocked<typeof Log>;
@@ -22,7 +27,7 @@ const headerBodies = (lines: string[]): string[] =>
   lines.map(line => line.replace(/^.*?\(\d+\/\d+\): /, '').replace(/\n$/, ''));
 
 describe('request logging', () => {
-  it('logs the method, url and headers before issuing the request', async () => {
+  it('logs the method, url and redacted headers before issuing the request', async () => {
     await requestGet({
       url: 'https://example.test/path',
       headers: {Cookie: 'ticket=abc'},
@@ -35,9 +40,39 @@ describe('request logging', () => {
     ).toBe(true);
     // `Headers` lower-cases every name on the way in, so assert on the
     // normalised name rather than the one passed by the caller.
-    expect(lines.some(line => line.includes('"cookie":"ticket=abc"'))).toBe(
+    expect(lines.some(line => line.includes('"cookie":"[REDACTED]"'))).toBe(
       true,
     );
+    expect(lines.some(line => line.includes('ticket=abc'))).toBe(false);
+  });
+
+  it('redacts authorization headers and sensitive URL parameters', async () => {
+    await requestGet({
+      url: 'https://example.test/callback?code=secret-code&state=secret-state',
+      headers: {Authorization: 'Bearer secret-token'},
+    });
+
+    const lines = loggedLines();
+    expect(lines.some(line => line.includes('code=%5BREDACTED%5D'))).toBe(true);
+    expect(lines.some(line => line.includes('state=%5BREDACTED%5D'))).toBe(
+      true,
+    );
+    expect(
+      lines.some(line => line.includes('"authorization":"[REDACTED]"')),
+    ).toBe(true);
+    expect(lines.some(line => line.includes('secret-'))).toBe(false);
+  });
+
+  it('redacts encoded parameter names and fragment values', async () => {
+    await requestGet({
+      url: 'https://example.test/callback?%74icket=secret#access_token=fragment',
+    });
+
+    const line = loggedLines().join('\n');
+    expect(line).toContain('%74icket=%5BREDACTED%5D');
+    expect(line).toContain('access_token=%5BREDACTED%5D');
+    expect(line).not.toContain('secret');
+    expect(line).not.toContain('fragment');
   });
 
   it('logs the status and elapsed time on completion', async () => {
@@ -64,6 +99,36 @@ describe('request logging', () => {
           call[1].includes('https://example.test/x'),
       ),
     ).toBe(true);
+  });
+
+  it('redacts secrets from URL fragments, path segments and error text', async () => {
+    (global.fetch as jest.Mock).mockRejectedValue(
+      new Error(
+        'request failed for /ticket/path-secret#access_token=fragment-secret',
+      ),
+    );
+
+    await expect(
+      requestGet({url: 'https://example.test/ticket/path-secret'}),
+    ).rejects.toThrow('path-secret');
+    await flushPromises();
+
+    const line = mockLog.e.mock.calls[0]?.[1] ?? '';
+    expect(line).toContain('/%5BREDACTED%5D');
+    expect(line).toContain('access_token=%5BREDACTED%5D');
+    expect(line).not.toContain('path-secret');
+    expect(line).not.toContain('fragment-secret');
+  });
+
+  it('redacts complete authorization and cookie text values', () => {
+    const redacted = redactSensitiveText(
+      'Authorization: Bearer bearer-secret; Cookie: session=cookie-secret; next=ok',
+    );
+
+    expect(redacted).toContain('Authorization: [REDACTED]');
+    expect(redacted).toContain('Cookie: [REDACTED]');
+    expect(redacted).not.toContain('bearer-secret');
+    expect(redacted).not.toContain('cookie-secret');
   });
 
   it('splits oversized header logs into 4KB chunks instead of one line', async () => {

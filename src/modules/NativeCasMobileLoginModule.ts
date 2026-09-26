@@ -8,7 +8,7 @@ import {TurboModuleRegistry} from 'react-native';
  */
 
 export interface Spec extends TurboModule {
-  onRequestSuccess(studentId: string, password: string, cookie: string): void;
+  onLoginSuccess(cookie: string): Promise<boolean>;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>(

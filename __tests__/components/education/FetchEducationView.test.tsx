@@ -67,7 +67,7 @@ const renderView = async (overrides: Partial<ViewProps> = {}) => {
 
 /** Drive the component into the re-auth stage by rejecting with a CAS error. */
 const renderInReAuthStage = async (
-  reAuthUrl = 'https://cas.example/reauth',
+  reAuthUrl = 'https://cas.whu.edu.cn/reauth',
   overrides: Partial<ViewProps> = {},
 ) => {
   const result = await renderView({
@@ -202,9 +202,9 @@ describe('FetchEducationView', () => {
     });
 
     it('passes the re-auth url from the error into the webview', async () => {
-      await renderInReAuthStage('https://cas.example/reauth');
+      await renderInReAuthStage('https://cas.whu.edu.cn/reauth');
       expect(screen.getByTestId(`${TEST_ID}-reauth`).props.source).toEqual({
-        uri: 'https://cas.example/reauth',
+        uri: 'https://cas.whu.edu.cn/reauth',
       });
     });
 
@@ -220,11 +220,11 @@ describe('FetchEducationView', () => {
   });
 
   describe('re-auth completion', () => {
-    const ticketUrl = 'https://cas.example/?ticket=ST-1';
+    const ticketUrl = 'https://cas.whu.edu.cn/?ticket=ST-1';
 
     const startTicketFlow = async (overrides: Partial<ViewProps> = {}) => {
       const result = await renderInReAuthStage(
-        'https://cas.example/reauth',
+        'https://cas.whu.edu.cn/reauth',
         overrides,
       );
       screen
@@ -237,7 +237,14 @@ describe('FetchEducationView', () => {
       global.fetch = jest.fn(() => Promise.resolve(new Response())) as never;
       const {doFetch} = await startTicketFlow();
 
-      await waitFor(() => expect(global.fetch).toHaveBeenCalledWith(ticketUrl));
+      await waitFor(() =>
+        expect(global.fetch).toHaveBeenCalledWith(
+          ticketUrl,
+          expect.objectContaining({
+            headers: expect.objectContaining({Cookie: ''}),
+          }),
+        ),
+      );
       await waitFor(() => expect(doFetch).toHaveBeenCalledTimes(1));
     });
 

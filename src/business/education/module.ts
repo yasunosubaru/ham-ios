@@ -58,9 +58,7 @@ const updateCourseList = async (year: number, semester: number) => {
   if (ignoredCourseList.length > 0) {
     Log.e(
       'updateCourseList',
-      `ignored ${ignoredCourseList.length} unparsable course(s): ${ignoredCourseList
-        .map(course => course.name || course.courseId)
-        .join(', ')}`,
+      `ignored ${ignoredCourseList.length} unparsable course(s)`,
     );
   }
   EducationModule.onGetCourseList(nativeCourseList, nativeCourseGridList, null);

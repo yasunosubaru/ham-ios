@@ -234,6 +234,66 @@ describe('onShouldStartLoadWithRequest token extraction', () => {
   });
 });
 
+/**
+ * What CAS actually does, verified against the live server:
+ *   GET /authserver/mobile/callback?appId=985180443
+ *     -> 302 Location: /authserver/mobile/default.html#mobile_token=...
+ * The token rides in the fragment. The cases above use the query form, so they
+ * pass whether or not the fragment is handled; these fail if it is not.
+ */
+describe('token in the URL fragment, as CAS really redirects', () => {
+  const fragmentUrl = (token: string) =>
+    `https://cas.whu.edu.cn/authserver/mobile/default.html#mobile_token=${token}`;
+
+  it('blocks navigation when the token arrives in the fragment', async () => {
+    await render(<CasMobileLoginView />);
+    expect(
+      webviewProps().onShouldStartLoadWithRequest({url: fragmentUrl('abc123')}),
+    ).toBe(false);
+  });
+
+  it('stores the cookie and notifies the host on a fragment token', async () => {
+    const onLoginSuccess = jest.fn();
+    cookieManager.getAll.mockResolvedValue({cas: cookie('cas', 'session')});
+    await render(<CasMobileLoginView onLoginSuccess={onLoginSuccess} />);
+    webviewProps().onShouldStartLoadWithRequest({url: fragmentUrl('abc123')});
+    await waitFor(() => {
+      expect(casMobileLoginModule.onLoginSuccess).toHaveBeenCalledWith(
+        'cas=session',
+      );
+      expect(onLoginSuccess).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('does not treat the literal null fragment as a login', async () => {
+    // This is where CAS redirects when there is no session.
+    await render(<CasMobileLoginView />);
+    expect(
+      webviewProps().onShouldStartLoadWithRequest({url: fragmentUrl('null')}),
+    ).toBe(true);
+    expect(casMobileLoginModule.onLoginSuccess).not.toHaveBeenCalled();
+  });
+
+  it('does not treat a fragment token on another host as a CAS success', async () => {
+    await render(<CasMobileLoginView />);
+    expect(
+      webviewProps().onShouldStartLoadWithRequest({
+        url: 'https://evil.example/authserver/mobile/default.html#mobile_token=abc123',
+      }),
+    ).toBe(true);
+    expect(casMobileLoginModule.onLoginSuccess).not.toHaveBeenCalled();
+  });
+
+  it('keeps the query form working', async () => {
+    await render(<CasMobileLoginView />);
+    expect(
+      webviewProps().onShouldStartLoadWithRequest({
+        url: 'https://cas.whu.edu.cn/authserver/mobile/default.html?mobile_token=abc123',
+      }),
+    ).toBe(false);
+  });
+});
+
 describe('cookie retrieval by platform', () => {
   const triggerSuccess = () => {
     webviewProps().onShouldStartLoadWithRequest({

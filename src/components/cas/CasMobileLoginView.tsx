@@ -169,7 +169,25 @@ const extractMobileToken = (url: string) => {
     ) {
       return undefined;
     }
-    return parsed.searchParams.get('mobile_token') || undefined;
+    // WHU's CAS hands the token over in the fragment, not the query string:
+    //   /authserver/mobile/callback?appId=...  ->  302  ->
+    //   /authserver/mobile/default.html#mobile_token=...
+    // URL.searchParams only covers the part before '#', so reading the query
+    // alone never sees the token and login completion is never detected — the
+    // WebView then just sits on the "Mobile" landing page. The value itself is
+    // only used as a signal; the session travels in the cookie header.
+    const fromQuery = parsed.searchParams.get('mobile_token');
+    if (fromQuery) {
+      return fromQuery;
+    }
+    const fragment = parsed.hash.replace(/^#/, '');
+    const fromFragment = new URLSearchParams(fragment).get('mobile_token');
+    // CAS emits the literal string "null" when there is no session, which is
+    // not a successful login.
+    if (!fromFragment || fromFragment === 'null') {
+      return undefined;
+    }
+    return fromFragment;
   } catch {
     return undefined;
   }

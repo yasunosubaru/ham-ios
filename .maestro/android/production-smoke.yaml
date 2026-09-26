@@ -1,0 +1,33 @@
+appId: com.nowcent.ham.rndebug
+name: Standalone Ham production entry
+tags:
+  - smoke
+  - production
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: home-title
+    timeout: 60000
+
+- tapOn:
+    id: course-schedule
+- assertVisible:
+    id: back-button
+
+- tapOn:
+    id: back-button
+- tapOn:
+    id: scores
+- assertVisible:
+    id: back-button
+
+- tapOn:
+    id: back-button
+- tapOn:
+    id: calculator
+- assertVisible:
+    id: calculator-add-course
+- assertVisible:
+    id: calculator-course-name

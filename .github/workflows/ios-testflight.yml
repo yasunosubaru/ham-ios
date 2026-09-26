@@ -1,0 +1,140 @@
+name: iOS TestFlight Upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'App Store marketing version, for example 1.0.0'
+        required: true
+        type: string
+        default: '1.0.0'
+      build_number:
+        description: 'Build number; must be unique and higher than every uploaded build'
+        required: true
+        type: string
+        default: '1'
+      release_notes:
+        description: 'What to Test notes'
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  group: ios-testflight-upload
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: macos-15
+    timeout-minutes: 120
+    environment: testflight
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_KEY_ISSUER_ID: ${{ secrets.ASC_KEY_ISSUER_ID }}
+      ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+      DEVELOPMENT_TEAM: ${{ vars.IOS_DEVELOPMENT_TEAM }}
+      PRODUCT_BUNDLE_IDENTIFIER: ${{ vars.IOS_BUNDLE_ID }}
+      ASC_IN_HOUSE: ${{ vars.ASC_IN_HOUSE }}
+      MARKETING_VERSION: ${{ inputs.version_name }}
+      CURRENT_PROJECT_VERSION: ${{ inputs.build_number }}
+      RELEASE_NOTES: ${{ inputs.release_notes }}
+      HUSKY: '0'
+      FASTLANE_SKIP_UPDATE_CHECK: '1'
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Record Xcode version
+        id: xcode
+        run: |
+          set -euo pipefail
+          version="$(xcodebuild -version | head -n 1)"
+          test -n "$version"
+          echo "version=$version" | tr ' ' '-' >> "$GITHUB_OUTPUT"
+          xcodebuild -version
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install CocoaPods
+        run: |
+          gem install cocoapods -v 1.16.2 --no-document
+          pod --version
+
+      - name: Cache CocoaPods downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            ios/Pods
+            ~/Library/Caches/CocoaPods
+          key: ${{ runner.os }}-ios-${{ steps.xcode.outputs.version }}-pods-1.16.2-${{ hashFiles('ios/Podfile.lock', 'node_modules/react-native/sdks/hermes-engine/version.properties', 'node_modules/react-native/package.json') }}
+
+      - name: Install iOS dependencies
+        working-directory: ios
+        run: pod _1.16.2_ install --no-repo-update
+
+      - name: Generate embedded score scripts
+        run: pnpm embed
+
+      - name: Install Fastlane
+        run: |
+          gem install fastlane -v 2.240.1 --no-document
+          fastlane --version
+
+      - name: Materialize App Store Connect key
+        run: |
+          set -euo pipefail
+          : "${ASC_KEY_ID:?ASC_KEY_ID is required}"
+          : "${ASC_KEY_ISSUER_ID:?ASC_KEY_ISSUER_ID is required}"
+          : "${ASC_KEY_CONTENT:?ASC_KEY_CONTENT is required}"
+          : "${DEVELOPMENT_TEAM:?IOS_DEVELOPMENT_TEAM repository variable is required}"
+          : "${PRODUCT_BUNDLE_IDENTIFIER:?IOS_BUNDLE_ID repository variable is required}"
+          umask 077
+          key_path="$RUNNER_TEMP/private_keys/AuthKey.p8"
+          mkdir -p "$RUNNER_TEMP/private_keys"
+          install -m 600 /dev/null "$key_path"
+          if grep -q 'BEGIN PRIVATE KEY' <<< "$ASC_KEY_CONTENT"; then
+            printf '%s\n' "$ASC_KEY_CONTENT" | tr -d '\r' > "$key_path"
+          else
+            printf '%s' "$ASC_KEY_CONTENT" | tr -d '\r' | openssl base64 -d -A > "$key_path"
+          fi
+          chmod 600 "$key_path"
+          grep -q 'BEGIN PRIVATE KEY' "$key_path"
+          [[ "$MARKETING_VERSION" =~ ^[0-9]+([.][0-9]+)*$ ]]
+          [[ "$CURRENT_PROJECT_VERSION" =~ ^[1-9][0-9]*$ ]]
+          echo "ASC_KEY_PATH=$key_path" >> "$GITHUB_ENV"
+
+      - name: Archive and upload to TestFlight
+        run: fastlane ios testflight
+
+      - name: Remove App Store Connect key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/private_keys/AuthKey.p8"
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-testflight-ipa
+          path: |
+            ios/artifacts/*.ipa
+            ios/artifacts/DistributionSummary.plist
+          if-no-files-found: error
+          retention-days: 7

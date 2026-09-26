@@ -1,0 +1,1 @@
+app_identifier(ENV.fetch('PRODUCT_BUNDLE_IDENTIFIER', 'com.nowcent.ham.rn'))

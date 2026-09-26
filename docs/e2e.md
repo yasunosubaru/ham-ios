@@ -2,20 +2,19 @@
 
 ## Scope
 
-The e2e suite exercises the **debug shell** in `ios/` and `android/`, not the
-real ham-ios / ham-android host apps. It proves the RN bundle boots inside a
-native container and that the score calculator screen renders — the
-integration between the bundled JS and the native host. It does not prove
-behaviour of the shipped app.
+The iOS and Android release suites boot the standalone `Ham` production entry
+and check its home, course, score, and calculator screens with stable
+accessibility IDs. The old component/course-import flows remain in the
+`ios-debug-legacy` and `android-debug-legacy` directories as historical examples
+for a future dedicated debug target. Neither suite validates the private
+`ham-ios` / `ham-android` hosts or a signed TestFlight artifact.
 
 Flows run against a **Release** build, so the bundle is embedded in the app and
 no Metro server is involved. See [Build Release, not Debug](#build-release-not-debug).
 
-What each screen actually renders is worth knowing before writing assertions:
-`RNCommon` renders an empty `<View />`, and `RNFetchCourseView` /
-`RNFetchScoreView` show only a spinner before calling back into native code.
-Only `RNScoreCalcView` has meaningful UI to assert on. See
-[What is worth testing](#what-is-worth-testing).
+The production screens use stable test IDs, so the flows do not depend on the
+simulator's language. The older debug-shell flows are not run by CI; their
+component-specific assertions are documented in the historical flow files.
 
 ## Prerequisites
 
@@ -59,8 +58,8 @@ xcodebuild -workspace ios/ham-rn.xcworkspace -scheme ham-rn \
   -derivedDataPath ios/build/e2e build \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
 
-# Android — release is already signed with the checked-in debug keystore,
-# so no extra secrets are needed
+# Android — the release APK embeds the production `index.js` entry.
+# It is signed with the checked-in debug keystore for CI smoke purposes.
 pnpm embed
 cd android && ./gradlew assembleRelease --no-daemon
 ```
@@ -98,19 +97,19 @@ workflows. If you ever switch the emulator to `arm64-v8a`, drop the override.
 
 ## Running
 
-CI runs every flow in `.maestro/{ios,android}/` on both platforms:
+CI runs `.maestro/ios/production-smoke.yaml` and
+`.maestro/android/production-smoke.yaml` for the standalone release entries.
+The old debug-shell flows were moved to `ios-debug-legacy/` and
+`android-debug-legacy/` and are historical examples only.
 
-| Flow | What it covers |
-|---|---|
-| `scorecalc.yaml` | The only screen with real, stable content — the bundled script list. |
-| `ignored-course.yaml` | The course-import path, including the ignored-course notice. |
-| `course-import-outcomes.yaml` | Every other way the import can end: clean, all-failed, empty, login failure. |
-| `smoke.yaml` | Each registered entry launches with the embedded bundle. |
+| Flow                            | What it covers                                                                                              |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `ios/production-smoke.yaml`     | The iOS production bundle opens the home, course, score, and calculator routes by stable accessibility IDs. |
+| `android/production-smoke.yaml` | The Android production APK opens the same four routes without CAS credentials.                              |
 
-See [Testing the course flow](#testing-the-course-flow) for how the second and
-third ones work without credentials, and
-[Known instability](#known-instability-across-repeated-runs) for what to expect
-if you run flows repeatedly by hand.
+The production flows require no CAS credentials and only assert that each route
+opens. The historical course-import flows require their dedicated debug target;
+see the legacy directories rather than running them against the release app.
 
 ```bash
 # iOS (simulator must already be running, Release app already installed)
@@ -120,7 +119,7 @@ maestro test .maestro/ios/
 maestro test .maestro/android/
 
 # A single flow
-maestro test .maestro/ios/ignored-course.yaml
+maestro test .maestro/ios/production-smoke.yaml
 ```
 
 Pass `--device <udid>` to target a specific simulator; without it Maestro picks
@@ -128,7 +127,7 @@ one, which is fragile when several are booted.
 
 ```bash
 maestro test --device "$(xcrun simctl list devices | grep -i booted | grep -oE '[0-9A-F-]{36}' | head -1)" \
-  .maestro/ios/scorecalc.yaml
+  .maestro/ios/production-smoke.yaml
 ```
 
 Set `MAESTRO_DRIVER_STARTUP_TIMEOUT` if the app takes longer than the default
@@ -136,32 +135,21 @@ to boot on a cold simulator.
 
 ## Writing flows
 
-### The debug shell is English, the RN content is not
+### Use stable accessibility IDs
 
-The shell's navigation labels are hardcoded English (`ios/ham-rn/HomeView.swift`
-and `android/.../HomeActivity.kt`): `CasMobileLoginView`, `RNFetchCourseView`,
-`RNFetchScoreView`, `RNScoreCalcView`, `RNCommon`.
+The standalone production flow uses IDs such as `course-schedule`, `scores`,
+`calculator`, and `back-button`; these do not depend on the simulator language.
+The older Android debug-shell flows still use hardcoded shell labels and
+Chinese fixture titles, so they are kept separate from the iOS production job.
 
-The RN screens render through i18next. Which language you get depends on
-`NativeCommonModule.getLocale()`, a native module reading the device locale.
-That means the language **varies per device** and is not something a flow can
-pin — so avoid asserting on translated copy entirely.
+New production flows should prefer IDs exposed by `testID` or
+`accessibilityLabel` over translated text.
 
-The only safe anchors are the two things that never change:
+### Prefer `id` over `text` where the production screen exposes it
 
-- the shell's navigation labels (hardcoded English in `HomeView.swift` /
-  `HomeActivity.kt`), and
-- `RNScoreCalcView`'s two script titles, which are hardcoded Chinese in
-  `src/business/education/scorecalc/fetch.ts` regardless of locale.
-
-This is why the flows do not assert `'Loading'`, `'In use'`, or any other
-i18next string: they would pass on one machine and fail on another.
-
-### Prefer `id` over `text` where the shell exposes it
-
-Android Compose screens can expose `Modifier.testTag`; the debug shell does not
-currently set any, so both platforms fall back to text matching. Text matching
-is brittle against copy changes — if you add a tag, prefer `id:` in the flow.
+The production flow uses `testID` together with a stable `accessibilityLabel`
+where iOS needs an accessibility identifier. Text matching remains brittle
+against copy changes, so new production flows should prefer `id:`.
 
 ### `assertVisible` has no timeout — use `extendedWaitUntil` to wait
 
@@ -170,7 +158,7 @@ command retries for a fixed ~7 seconds and then fails. This is easy to get
 wrong, and the error is unhelpful:
 
 ```
-Unknown Property: timeout at .maestro/ios/scorecalc.yaml:-1:-1
+Unknown Property: timeout at .maestro/ios/production-smoke.yaml:-1:-1
 ```
 
 7 seconds is not reliably enough for a cold RN bundle launch, so anything that
@@ -180,7 +168,7 @@ has to wait for RN content should use `extendedWaitUntil`, which does take a
 ```yaml
 - extendedWaitUntil:
     visible: '计算机学院综测计算（F2）'
-    timeout: 60000      # iOS: 60s; use 120s on Android, emulators are slower
+    timeout: 60000 # iOS: 60s; use 120s on Android, emulators are slower
 ```
 
 Use `assertVisible` for things that are already on screen, and
@@ -205,23 +193,23 @@ on it working. (CI no longer runs this step at all.)
 
 ## What is worth testing
 
-| Screen | Worth an e2e flow? | Why |
-|---|---|---|
-| `RNScoreCalcView` | **Yes** | The only screen with real UI: script list, select/upgrade buttons, and the developer debug card. Its two script titles are hardcoded Chinese, so the assertions hold regardless of locale. |
-| `RNFetchCourseViewE2E` | **Yes** | Drives the course-import path with a canned payload, including the ignored-course notice, and every other branch of the same state machine via its `...E2E<Scenario>` siblings. See [Testing the course flow](#testing-the-course-flow). |
-| `RNCasMobileLoginView` | Partially | Loads `cas.whu.edu.cn` in a WebView. Without test credentials you can only assert that the WebView loads, not that login works. |
-| `RNFetchCourseView` | No | Renders a spinner, then calls back into native. There is no UI to assert beyond "it did not crash". Its e2e-named sibling covers the behaviour. |
-| `RNFetchScoreView` | No | Renders a spinner, then calls back into native. |
-| `RNCommon` | No | Renders an empty `<View />`; it only logs and subscribes to native events. |
+The production smoke flow should stay credential-free and limited to stable
+route-level checks: it can verify that the home, CAS gate, score gate, and
+calculator open without crashing. It must not assert private course or score
+content, nor depend on a particular device locale.
 
-### Testing the course flow
+The component-level course-import cases below are historical documentation for
+the removed debug shell. They are retained so a future dedicated debug target
+can restore the coverage without re-inventing the fixture design.
+
+### Testing the legacy course flow
 
 The flows have no credentials for `cas.whu.edu.cn` and cannot fabricate a CAS
 session, so they cannot drive the real fetch. They also cannot intercept XHR —
 Maestro has no network stubbing — so the fixture has to live inside the bundle.
 
-`RNFetchCourseViewE2E` (registered in `index.js`, reachable from both debug
-shells) installs `src/e2e/courseFixture.ts`, which patches `global.fetch` to
+`RNFetchCourseViewE2E` (registered in `index.debug.js`, used by the Android
+debug shell) installs `src/e2e/courseFixture.ts`, which patches `global.fetch` to
 answer just two URLs and delegates everything else to the original. Every other
 step is production code: real `loginEducation`, real `getCourseList`, real
 `parseResponse` and `toNativeCoursePairing`, real notice. The fixture's payload
@@ -236,18 +224,18 @@ server returns, so a flow cannot reach them by interacting with the UI — it ha
 to launch a different canned payload. That means one AppRegistry entry per
 branch, each with its own row in the debug shell:
 
-| Entry | Payload | The branch it puts the machine in |
-|---|---|---|
-| `RNFetchCourseViewE2E` | 2 parse, 20 do not | Notice appears; acknowledging commits a timetable. |
-| `...E2EClean` | 2 parse, 0 do not | No notice; the import completes on its own. |
-| `...E2EAllFailed` | 0 parse, 20 do not | Notice appears; acknowledging reports an error. |
-| `...E2EEmpty` | no courses at all | No notice; an empty timetable is a success. |
-| `...E2ELoginFailed` | CAS answers without the success marker | Fails before any course is parsed. |
+| Entry                  | Payload                                | The branch it puts the machine in                  |
+| ---------------------- | -------------------------------------- | -------------------------------------------------- |
+| `RNFetchCourseViewE2E` | 2 parse, 20 do not                     | Notice appears; acknowledging commits a timetable. |
+| `...E2EClean`          | 2 parse, 0 do not                      | No notice; the import completes on its own.        |
+| `...E2EAllFailed`      | 0 parse, 20 do not                     | Notice appears; acknowledging reports an error.    |
+| `...E2EEmpty`          | no courses at all                      | No notice; an empty timetable is a success.        |
+| `...E2ELoginFailed`    | CAS answers without the success marker | Fails before any course is parsed.                 |
 
-`src/e2e/courseImportEntries.tsx` builds them, and `__tests__/App.test.tsx`
-asserts that each is registered **and** listed in both `HomeView.swift` and
-`HomeActivity.kt` — a scenario in one list but not the other is unreachable by
-Maestro, and the failure is a blank container rather than an error.
+`src/e2e/courseImportEntries.tsx` builds the Android debug entries. The
+`__tests__/App.test.tsx` suite checks that the production `index.js` contains
+only `Ham` and that the separate `index.debug.js` retains the E2E registrations;
+it does not assert the removed iOS Swift demo shell.
 
 #### The verdict is read from the label, not the text
 
@@ -259,13 +247,13 @@ correctly, on screen. The flow waited for the label (which passed) and then
 failed `assertVisible: 'success'`, with the verdict sitting there the whole
 time.
 
-So the probe puts the outcome *in* the label:
+So the probe puts the outcome _in_ the label:
 
-| Rendered text | `accessibilityLabel` | What Maestro can match on iOS |
-|---|---|---|
-| `success` | `courseImportVerdict-success` | `courseImportVerdict-success` |
-| `failed` | `courseImportVerdict-failed` | `courseImportVerdict-failed` |
-| `pending` | `courseImportPending` | `courseImportPending` |
+| Rendered text | `accessibilityLabel`          | What Maestro can match on iOS |
+| ------------- | ----------------------------- | ----------------------------- |
+| `success`     | `courseImportVerdict-success` | `courseImportVerdict-success` |
+| `failed`      | `courseImportVerdict-failed`  | `courseImportVerdict-failed`  |
+| `pending`     | `courseImportPending`         | `courseImportPending`         |
 
 Android is unaffected and needs none of this: it selects by `id`, because the RN
 `testID` does surface there as a resource-id, and on Android a label does not
@@ -275,7 +263,7 @@ passed 4/4 while ios failed 1/4 on the same commit.
 The general form of the trap: **never put an `accessibilityLabel` on a `<Text>`
 whose content a flow has to assert.** If a flow must read the text, leave the
 label off and let iOS expose the content. If a flow must select the node by
-label, put everything the flow needs *in* the label.
+label, put everything the flow needs _in_ the label.
 
 `__tests__/e2e/courseFixture.test.ts` pins the fixture's shape, because a
 fixture that stopped producing ignored courses would leave the flow asserting
@@ -393,7 +381,7 @@ Two failure shapes when running locally, both environment-level, not flow bugs:
   installed; check `simctl get_app_container booted <bundle-id>` before
   assuming it is simulator wear.
 
-What is *not* the cause: it is not a network problem, and it is not the wait
+What is _not_ the cause: it is not a network problem, and it is not the wait
 timeout. `extendedWaitUntil` with a 60s timeout does not prevent it. Repeated
 cold launches of an RN app is what wears the simulator down. (An earlier claim
 in this file that timeouts fixed the flake was wrong — that measurement had a
@@ -411,7 +399,7 @@ because neither error message pointed at the actual cause:
 1. **The app was never installed.** `xcodebuild build` produces a `.app` and
    does not install it, and `simulator-action` only boots the device. Maestro
    then failed at `launchApp` with `FBSOpenApplicationServiceErrorDomain
-   code=4`, which reads like a launch bug. Fixed with an explicit
+code=4`, which reads like a launch bug. Fixed with an explicit
    `xcrun simctl install <udid> <app>` step, and `--device <udid>` on Maestro
    so it targets that device instead of resolving `booted`.
 
@@ -419,7 +407,7 @@ because neither error message pointed at the actual cause:
    `reactNativeArchitectures=arm64-v8a`, so `assembleRelease` produced an
    arm64-only APK. Installing it on the x86_64 emulator crashed in
    `MainApplication.onCreate` with `SoLoaderDSONotFoundError: couldn't find DSO
-   to load: libreactnative.so`, before any RN content rendered, so every
+to load: libreactnative.so`, before any RN content rendered, so every
    assertion timed out. Fixed with `-PreactNativeArchitectures=x86_64`.
 
 Also: the concurrency group must include `github.job`, or the two jobs share

@@ -38,13 +38,21 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+      - name: Record Xcode version
+        id: xcode
+        run: |
+          set -euo pipefail
+          version="$(xcodebuild -version | head -n 1)"
+          test -n "$version"
+          echo "version=$version" | tr ' ' '-' >> "$GITHUB_OUTPUT"
+          xcodebuild -version
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 10.32.1
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -57,7 +65,7 @@ jobs:
             ios/Pods
             ~/Library/Caches/CocoaPods
           # Deliberately no `restore-keys`: see the note in ios-build.yml.
-          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock', 'node_modules/react-native/sdks/hermes-engine/version.properties', 'node_modules/react-native/package.json') }}
+          key: ${{ runner.os }}-ios-${{ steps.xcode.outputs.version }}-pods-1.16.2-${{ hashFiles('ios/Podfile.lock', 'node_modules/react-native/sdks/hermes-engine/version.properties', 'node_modules/react-native/package.json') }}
       - name: Install CocoaPods dependencies
         working-directory: ios
         run: pod _1.16.2_ install --no-repo-update
@@ -66,9 +74,8 @@ jobs:
         run: pnpm embed
 
       # The simulator is created and booted up front so the build below has a
-      # destination, and so Maestro attaches to a warm device. The bundle id
-      # comes from ios/ham-rn.xcodeproj: PRODUCT_BUNDLE_IDENTIFIER is
-      # org.reactjs.native.example.$(PRODUCT_NAME) and PRODUCT_NAME is ham-rn.
+      # destination, and so Maestro attaches to a warm device. The standalone
+      # production bundle ID is com.nowcent.ham.rn.
       - name: Boot simulator
         id: simulator
         uses: futureware-tech/simulator-action@v4
@@ -106,29 +113,20 @@ jobs:
         run: |
           xcrun simctl install \
             "${{ steps.simulator.outputs.udid }}" \
-            "ios/build/e2e/Build/Products/Release-iphonesimulator/ham-rn.app"
+            "ios/build/e2e/Build/Products/Release-iphonesimulator/Ham.app"
 
       - name: Install Maestro
         run: |
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
 
-      # The whole directory, now that every flow in it can pass:
-      #
-      #   - scorecalc.yaml asserts the only screen with real, stable content.
-      #   - ignored-course.yaml drives the course-import path with a canned
-      #     payload (src/e2e/courseFixture.ts) and asserts the notice names
-      #     each dropped course. It needs no credentials.
-      #   - smoke.yaml launches each registered entry directly. It used to
-      #     navigate back to the shell afterwards and assert the shell was
-      #     still there, which failed: the debug shell renders empty after a
-      #     pop. Reaching each screen with a fresh launch keeps the check —
-      #     the entry boots with the embedded bundle — without depending on a
-      #     shell behaviour that is broken. See docs/e2e.md.
+      # The production flow uses stable accessibility IDs and does not require
+      # CAS credentials. The old iOS debug-shell flows are kept outside this
+      # directory for historical reference. See docs/e2e.md.
       - name: Run iOS flows
         run: |
           maestro test --device "${{ steps.simulator.outputs.udid }}" \
-            .maestro/ios/
+            .maestro/ios/production-smoke.yaml
 
       - name: Upload Maestro artifacts
         if: failure()
@@ -164,7 +162,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 10.32.1
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Set up JDK
@@ -185,20 +183,11 @@ jobs:
       - name: Embed scripts
         run: pnpm embed
 
-      # Release, not Debug. The RN Gradle plugin skips bundling for
-      # debuggableVariants (default: debug), so a debug APK has no JS of its
-      # own and RNContainer.kt runs with useDevSupport = BuildConfig.DEBUG,
-      # i.e. it looks for a Metro server that is not running.
-      # app/build.gradle.kts already signs release with the checked-in debug
-      # keystore, so no extra secrets are needed.
-      #
-      # -PreactNativeArchitectures overrides android/gradle.properties, which
-      # builds arm64-v8a only. The emulator below is x86_64, and an arm64-only
-      # APK installed on it crashes on launch with SoLoaderDSONotFoundError for
-      # libreactnative.so — the app dies in MainApplication.onCreate and every
-      # assertion then times out, which looks like a flow problem rather than an
-      # ABI mismatch. Overriding here rather than editing gradle.properties
-      # keeps the arm64 default intact for the other Android workflows.
+      # The release APK embeds the production `index.js` entry. The older
+      # Android debug-shell flows are kept outside this directory and are not
+      # run against this artifact.
+      # The emulator is x86_64, while the checked-in default is arm64-v8a.
+      # Override only this CI build so the release APK matches the runner ABI.
       - name: Build Android Release
         working-directory: android
         env:
@@ -228,7 +217,7 @@ jobs:
           script: |
             adb logcat -c
             adb install -r android/app/build/outputs/apk/release/app-release.apk
-            maestro test .maestro/android/
+            maestro test .maestro/android/production-smoke.yaml
 
       # No separate logcat step: Maestro already writes device-logcat.txt and
       # crash-report.txt into ~/.maestro/tests/, which this step uploads. An

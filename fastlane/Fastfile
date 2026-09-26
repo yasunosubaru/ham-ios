@@ -1,0 +1,71 @@
+default_platform(:ios)
+
+platform :ios do
+  desc 'Archive the signed iOS app and upload a build to TestFlight'
+  lane :testflight do
+    root = File.expand_path('..', __dir__)
+    artifacts_dir = File.join(root, 'ios', 'artifacts')
+    required = %w[ASC_KEY_ID ASC_KEY_ISSUER_ID ASC_KEY_PATH DEVELOPMENT_TEAM PRODUCT_BUNDLE_IDENTIFIER]
+    missing = required.select { |name| ENV[name].to_s.strip.empty? }
+    UI.user_error!("Missing required environment variables: #{missing.join(', ')}") unless missing.empty?
+
+    key_path = ENV.fetch('ASC_KEY_PATH')
+    UI.user_error!("ASC_KEY_PATH does not exist: #{key_path}") unless File.file?(key_path)
+
+    bundle_id = ENV.fetch('PRODUCT_BUNDLE_IDENTIFIER')
+    if bundle_id == 'com.nowcent.ham'
+      UI.user_error!('Refusing to upload the standalone build with the official Ham bundle ID')
+    end
+
+    version_name = ENV.fetch('MARKETING_VERSION', '1.0.0')
+    build_number = ENV.fetch('CURRENT_PROJECT_VERSION', '1')
+    release_notes = ENV.fetch('RELEASE_NOTES', '').strip
+    release_notes = nil if release_notes.empty?
+
+    gym(
+      workspace: File.join(root, 'ios', 'ham-rn.xcworkspace'),
+      scheme: 'ham-rn',
+      configuration: 'Release',
+      output_directory: artifacts_dir,
+      clean: true,
+      export_method: 'app-store-connect',
+      allow_provisioning_updates: true,
+      xcodebuild_settings: {
+        'CODE_SIGN_STYLE' => 'Automatic',
+        'CURRENT_PROJECT_VERSION' => build_number,
+        'DEVELOPMENT_TEAM' => ENV.fetch('DEVELOPMENT_TEAM'),
+        'MARKETING_VERSION' => version_name,
+        'PRODUCT_BUNDLE_IDENTIFIER' => bundle_id,
+      },
+      # Automatic provisioning and export both use the App Store Connect key.
+      # The archive reuses the profile created by these xcodebuild arguments.
+      xcargs: [
+        '-authenticationKeyPath', key_path,
+        '-authenticationKeyID', ENV.fetch('ASC_KEY_ID'),
+        '-authenticationKeyIssuerID', ENV.fetch('ASC_KEY_ISSUER_ID'),
+      ],
+    )
+
+    ipa = lane_context[SharedValues::IPA_OUTPUT_PATH]
+    if ipa.nil? || !File.file?(ipa)
+      candidates = Dir[File.join(artifacts_dir, '*.ipa')]
+      UI.user_error!("Expected one exported IPA in #{artifacts_dir}, found #{candidates.length}") unless candidates.length == 1
+      ipa = candidates.first
+    end
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch('ASC_KEY_ID'),
+      in_house: ENV.fetch('ASC_IN_HOUSE', 'false').casecmp('true').zero?,
+      issuer_id: ENV.fetch('ASC_KEY_ISSUER_ID'),
+      key_filepath: key_path,
+    )
+
+    pilot(
+      app_identifier: bundle_id,
+      api_key: api_key,
+      changelog: release_notes,
+      distribute_external: false,
+      ipa: ipa,
+    )
+  end
+end

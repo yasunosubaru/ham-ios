@@ -1,11 +1,12 @@
 # Ham React Native
 
-[![React Native](https://img.shields.io/badge/React%20Native-0.83-61DAFB?logo=react&logoColor=white)](https://reactnative.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React Native](https://img.shields.io/badge/React%20Native-0.87-61DAFB?logo=react&logoColor=white)](https://reactnative.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Lint](https://github.com/whu-ham/ham-rn/actions/workflows/lint.yml/badge.svg)](https://github.com/whu-ham/ham-rn/actions/workflows/lint.yml)
 [![Bundle Check](https://github.com/whu-ham/ham-rn/actions/workflows/compile-check.yml/badge.svg)](https://github.com/whu-ham/ham-rn/actions/workflows/compile-check.yml)
 [![Android Build](https://github.com/whu-ham/ham-rn/actions/workflows/android-build.yml/badge.svg)](https://github.com/whu-ham/ham-rn/actions/workflows/android-build.yml)
 [![iOS Build](https://github.com/whu-ham/ham-rn/actions/workflows/ios-build.yml/badge.svg)](https://github.com/whu-ham/ham-rn/actions/workflows/ios-build.yml)
+[![iOS TestFlight](https://github.com/whu-ham/ham-rn/actions/workflows/ios-testflight.yml/badge.svg)](https://github.com/whu-ham/ham-rn/actions/workflows/ios-testflight.yml)
 [![License](https://img.shields.io/github/license/whu-ham/ham-rn)](./LICENSE)
 [![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/whu-ham/ham-rn/1-overview)
 
@@ -22,7 +23,7 @@ A React Native component monorepo for the Ham app, providing education-related f
 
 ## Tech Stack
 
-- React Native 0.83 (New Architecture enabled)
+- React Native 0.87 (New Architecture enabled)
 - TypeScript
 - Jotai (state management)
 - i18next (internationalization)
@@ -33,8 +34,8 @@ A React Native component monorepo for the Ham app, providing education-related f
 
 ### Prerequisites
 
-- Node.js >= 18
-- pnpm
+- Node.js >= 20.19 (Node 22 recommended for RN 0.87)
+- pnpm 10
 - Xcode (for iOS)
 - Android Studio (for Android)
 - CocoaPods
@@ -48,7 +49,7 @@ pnpm install
 ### iOS Setup
 
 ```bash
-cd ios && pod install && cd ..
+cd ios && pod _1.16.2_ install --no-repo-update && cd ..
 ```
 
 ### Running
@@ -108,19 +109,28 @@ src/
 └── utils/             # Shared utilities (color, request, UI)
 ```
 
-## Deployment
+## Standalone iOS / TestFlight
 
-See the `shell/` directory for deployment scripts. Hot updates are managed via `hot-updater`.
+The production entry point is `index.js` (`Ham`). The former debug shell and
+E2E registrations are not included in the application bundle. A standalone
+build uses the separate bundle identifier `com.nowcent.ham.rn`; it does not
+impersonate the official `com.nowcent.ham` record.
+
+See [`docs/testflight.md`](./docs/testflight.md) for Apple Developer setup,
+Fastlane, signing, and the manual TestFlight upload workflow. The upload
+workflow requires an explicitly configured Team ID, Bundle ID, and App Store
+Connect API key; those credentials are never stored in this repository.
 
 ## CI/CD
 
 GitHub Actions workflows run on PRs to `main` and pushes to `main`:
 
-- **Lint** – ESLint check
+- **Lint** – ESLint and TypeScript checks
 - **Test** – Jest suite
-- **Compile Check** – TypeScript type checking
+- **Compile Check** – Production and debug Metro bundles for iOS and Android
 - **Android Build** – Debug APK build verification
-- **iOS Build** – Debug build verification
+- **iOS Build** – Debug and unsigned Release simulator verification
+- **iOS TestFlight Upload** – Manual signed archive and TestFlight upload
 
 ## License
 

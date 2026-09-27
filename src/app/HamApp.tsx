@@ -14,6 +14,7 @@ import {useTranslation} from 'react-i18next';
 import {useColor} from '@/utils/color/color';
 import CourseScreen from '@/app/CourseScreen';
 import GpaCalculatorScreen from '@/app/GpaCalculatorScreen';
+import GradeEntryScreen from '@/app/GradeEntryScreen';
 import LibraryScreen from '@/app/LibraryScreen';
 import ScoreScreen from '@/app/ScoreScreen';
 import WeatherScreen from '@/app/WeatherScreen';
@@ -21,7 +22,13 @@ import CasModule from '@/modules/NativeCasModule';
 import NativeCommonModule from '@/modules/NativeCommonModule';
 
 type AppRoute =
-  'home' | 'courses' | 'scores' | 'calculator' | 'weather' | 'library';
+  | 'home'
+  | 'courses'
+  | 'scores'
+  | 'grades'
+  | 'calculator'
+  | 'weather'
+  | 'library';
 
 interface HamAppProps {
   appVersion?: string;
@@ -103,6 +110,16 @@ const HomeScreen = ({
       route: 'scores',
       testID: 'scores',
       title: t('app.home.scores_title'),
+    },
+    {
+      // The teacher view of the same page the score query uses. It only shows
+      // something to a teacher account, so it is not the card a student wants
+      // first -- but it is the honest entry point, and the page it opens is the
+      // university's own.
+      description: t('app.home.grades_description'),
+      route: 'grades',
+      testID: 'grades',
+      title: t('app.home.grades_title'),
     },
     {
       // Reuses the university session the app already holds, like the two
@@ -267,6 +284,8 @@ const HamApp = ({appVersion, buildNumber}: HamAppProps): React.JSX.Element => {
         return <CourseScreen onBack={() => setRoute('home')} />;
       case 'scores':
         return <ScoreScreen onBack={() => setRoute('home')} />;
+      case 'grades':
+        return <GradeEntryScreen onBack={() => setRoute('home')} />;
       case 'calculator':
         return <GpaCalculatorScreen onBack={() => setRoute('home')} />;
       case 'weather':

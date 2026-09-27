@@ -121,8 +121,28 @@ jobs:
       - name: Package the simulator app
         run: |
           set -euo pipefail
-          app='ios/build/Build/Products/Release-iphonesimulator/Ham.app'
+          # Ask the build system where it put the product instead of assuming.
+          # Without an explicit -derivedDataPath, xcodebuild writes to the
+          # per-user DerivedData directory, so `ios/build/Build/Products/...`
+          # does not exist. The first attempt assumed it did, and failed the job
+          # on a build that had in fact succeeded.
+          settings="$(xcodebuild \
+            -workspace ios/ham-rn.xcworkspace \
+            -scheme ham-rn \
+            -sdk iphonesimulator \
+            -configuration Release \
+            -showBuildSettings 2>/dev/null)"
+          products="$(printf '%s\n' "$settings" \
+            | awk -F' = ' '/^[[:space:]]*BUILT_PRODUCTS_DIR/ {print $2; exit}')"
+          product="$(printf '%s\n' "$settings" \
+            | awk -F' = ' '/^[[:space:]]*FULL_PRODUCT_NAME/ {print $2; exit}')"
+          test -n "$products" && test -n "$product" || {
+            echo '::error::could not read BUILT_PRODUCTS_DIR / FULL_PRODUCT_NAME'
+            exit 1
+          }
+          app="$products/$product"
           test -d "$app" || { echo "::error::$app was not produced"; exit 1; }
+          echo "packaging $app"
           # A stray .DS_Store inside the bundle is noise in a published artifact.
           find "$app" -name '.DS_Store' -delete
           # Prove the artifact carries no build-machine identity before it is
@@ -133,10 +153,11 @@ jobs:
           # what is inside. `grep -a` forces text mode, because otherwise grep
           # skips the Mach-O binaries where these paths actually live.
           #
-          # Every /Users/<name> in the build has to be `runner`. That is not a
-          # tautology on a runner -- it is a guard against a later step handing
-          # in an artifact built somewhere else, which is exactly how a personal
-          # directory would end up published.
+          # Every /Users/<name> has to be `runner`. On a runner that is nearly a
+          # tautology, and that is the point: it guards against a later step
+          # handing in an artifact built elsewhere, which is precisely how a
+          # personal directory becomes published. The alternative -- trusting
+          # that nobody adds such a step -- is how it happened the first time.
           echo 'build-machine paths referenced by the bundle:'
           found="$(grep -rhoaE '/Users/[A-Za-z0-9._-]+' "$app" | sort -u || true)"
           echo "${found:-  (none)}"
@@ -147,8 +168,7 @@ jobs:
               exit 1
             fi
           done <<< "$found"
-          (cd ios/build/Build/Products/Release-iphonesimulator \
-            && zip -qry "$GITHUB_WORKSPACE/Ham-iOS-Simulator-1.0.0.zip" Ham.app)
+          (cd "$products" && zip -qry "$GITHUB_WORKSPACE/Ham-iOS-Simulator-1.0.0.zip" "$product")
           ls -l "$GITHUB_WORKSPACE/Ham-iOS-Simulator-1.0.0.zip"
       - name: Upload the simulator app
         uses: actions/upload-artifact@v4

@@ -14,12 +14,14 @@ import {useTranslation} from 'react-i18next';
 import {useColor} from '@/utils/color/color';
 import CourseScreen from '@/app/CourseScreen';
 import GpaCalculatorScreen from '@/app/GpaCalculatorScreen';
+import LibraryScreen from '@/app/LibraryScreen';
 import ScoreScreen from '@/app/ScoreScreen';
 import WeatherScreen from '@/app/WeatherScreen';
 import CasModule from '@/modules/NativeCasModule';
 import NativeCommonModule from '@/modules/NativeCommonModule';
 
-type AppRoute = 'home' | 'courses' | 'scores' | 'calculator' | 'weather';
+type AppRoute =
+  'home' | 'courses' | 'scores' | 'calculator' | 'weather' | 'library';
 
 interface HamAppProps {
   appVersion?: string;
@@ -101,6 +103,14 @@ const HomeScreen = ({
       route: 'scores',
       testID: 'scores',
       title: t('app.home.scores_title'),
+    },
+    {
+      // Reuses the university session the app already holds, like the two
+      // above it -- but on a different host, with its own CAS client.
+      description: t('app.home.library_description'),
+      route: 'library',
+      testID: 'library',
+      title: t('app.home.library_title'),
     },
     {
       description: t('app.home.calculator_description'),
@@ -261,6 +271,8 @@ const HamApp = ({appVersion, buildNumber}: HamAppProps): React.JSX.Element => {
         return <GpaCalculatorScreen onBack={() => setRoute('home')} />;
       case 'weather':
         return <WeatherScreen onBack={() => setRoute('home')} />;
+      case 'library':
+        return <LibraryScreen onBack={() => setRoute('home')} />;
       case 'home':
       default:
         return (

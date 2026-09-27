@@ -5,6 +5,9 @@
  */
 import {
   buildCasRedirectUrl,
+  cancelBooking,
+  exchangeCasToken,
+  extractCasToken,
   getBookingHistory,
   getBreaches,
   getBuildingFloorDate,
@@ -19,23 +22,30 @@ import {
   loginLibrary,
   logout,
   quickBook,
-  cancelBooking,
   readToken,
+  signIn,
   stopUsing,
 } from './api';
 import {LibraryApiError, parseConfigEnvelope} from './parser';
 import {MissingCryptoBackendError, installCryptoBackend} from './signing';
 import type {CryptoBackend} from './signing';
-import {LIBRARY_BASE_URL, LIBRARY_FRONT_END} from './type';
+import {
+  LIBRARY_BASE_URL,
+  LIBRARY_CAS_SERVICE_REDIRECT,
+  LIBRARY_FRONT_END,
+} from './type';
 import type {LibraryConfig, LibraryHeaders, LibraryRecord} from './type';
 
 export {
   LIBRARY_BASE_URL,
+  LIBRARY_CAS_SERVICE_REDIRECT,
   LIBRARY_FRONT_END,
   LibraryApiError,
   MissingCryptoBackendError,
   buildCasRedirectUrl,
   cancelBooking,
+  exchangeCasToken,
+  extractCasToken,
   getBookingHistory,
   getBreaches,
   getBuildingFloorDate,
@@ -53,6 +63,7 @@ export {
   parseConfigEnvelope,
   quickBook,
   readToken,
+  signIn,
   stopUsing,
 };
 export type {CryptoBackend, LibraryConfig, LibraryHeaders, LibraryRecord};

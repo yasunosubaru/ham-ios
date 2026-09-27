@@ -3,18 +3,26 @@
 /.yarn/plugins/**/*  binary
 /.pnp.*              binary linguist-generated
 
-# Anything a shell executes has to stay LF, on every platform.
+# LF everywhere, on every platform.
 #
-# core.autocrlf=true is the default on Windows, and it applies to checkout *and*
-# to `git archive` on export. So a .sh committed from Windows reaches a macOS or
-# Linux machine as CRLF and fails to parse -- at `case ... in`, or at
-# `set -o pipefail`, with a message that points nowhere near the cause. It also
-# silently breaks the husky hooks, which have no extension to key off.
+# Two separate failures came out of core.autocrlf=true, and they share a cause:
 #
-# This is not hypothetical: the pre-push gate's own script was committed from
-# Windows, arrived on the Mac with 170 stray CR bytes, and reported a syntax
-# error 11 lines above the real problem.
-*.sh            text eol=lf
-*.bash          text eol=lf
-.husky/pre-*    text eol=lf
-scripts/*.sh    text eol=lf
+#   - A .sh committed from Windows reached macOS as CRLF and failed to parse, at
+#     `case ... in`, with a message pointing eleven lines away from the cause.
+#     It would also have silently broken the husky hooks, which have no extension
+#     to key an attribute off.
+#
+#   - `git archive` applies the same conversion on export, so a committed
+#     Podfile.lock arrived as CRLF. CocoaPods compares Podfile.lock against
+#     Pods/Manifest.lock byte for byte, so the two differed on every line despite
+#     being 2113 lines each, and the build died at "[CP] Check Pods Manifest.lock"
+#     naming neither the lockfile nor the line endings.
+#
+# The second is the one that makes `* text=auto` worth having on its own: any
+# tracked file something else compares byte-wise is corrupted by a checkout-time
+# conversion, and there is no way to tell from the diff that it happened.
+#
+# `* text=auto` normalises on commit, so CRLF cannot enter the object store at
+# all. `eol=lf` then keeps the working tree and `git archive` output LF on every
+# platform, which is what the shell scripts and the byte comparison both need.
+* text=auto eol=lf

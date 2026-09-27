@@ -97,12 +97,12 @@ echo "  simulator: $UDID ($state -> booted)"
 # reuse the long-lived checkout's copies through symlinks rather than refetching
 # them. The archive carries neither, since both are generated and gitignored.
 #
-# Reusing Pods means the pod xcconfig files still point at the long-lived
-# checkout's paths, so this build is a *does it compile, install and run* check
-# and not a clean one. That division is deliberate: the publishable artifact is
-# built by CI, which does its own `pod install` on a runner and therefore carries
-# no local path at all. A gate that did a fresh pod install on every push would
-# cost minutes each time and would still not be checking the thing that matters,
+# Reusing Pods means the pod xcconfig files still point at that checkout's
+# paths, so this build is a *does it compile, install and run* check and not a
+# clean one. That division is deliberate: the publishable artifact is built by
+# CI, which does its own `pod install` on a runner and therefore carries no local
+# path at all. A gate that did a fresh pod install on every push would cost
+# minutes each time and would still not be checking the thing that matters,
 # which is whether the app starts.
 if [ -e "$HOME/ham-rn/node_modules" ]; then
   rm -rf "$WORK/node_modules"
@@ -112,11 +112,29 @@ else
   (cd "$WORK" && pnpm install --frozen-lockfile) || { echo "  pnpm install failed"; exit 1; }
 fi
 
-if [ -d "$HOME/ham-rn/ios/Pods" ]; then
+# Reuse the Pods tree only while it still matches the lockfile.
+#
+# CocoaPods runs a build phase that compares Podfile.lock against
+# Pods/Manifest.lock, so a symlinked tree from a checkout with different
+# dependencies fails the build with "Check Pods Manifest.lock" and nothing that
+# points at the cause. Comparing first turns a confusing failure into either a
+# fast reuse or an honest install.
+pods_src="$HOME/ham-rn/ios/Pods"
+reuse_pods=0
+if [ -d "$pods_src" ] && [ -f "$WORK/ios/Podfile.lock" ] &&
+   [ -f "$pods_src/Manifest.lock" ] &&
+   cmp -s "$WORK/ios/Podfile.lock" "$pods_src/Manifest.lock"; then
+  reuse_pods=1
+fi
+
+if [ "$reuse_pods" = "1" ]; then
   rm -rf "$WORK/ios/Pods"
-  ln -s "$HOME/ham-rn/ios/Pods" "$WORK/ios/Pods"
+  ln -s "$pods_src" "$WORK/ios/Pods"
 else
-  echo "  installing pods (first run on this machine)"
+  reason="no reusable tree"
+  [ -d "$pods_src" ] && reason="Podfile.lock differs from its Manifest.lock"
+  echo "  installing pods ($reason)"
+  rm -rf "$WORK/ios/Pods"
   (cd "$WORK/ios" && pod install --no-repo-update) || { echo "  pod install failed"; exit 1; }
 fi
 

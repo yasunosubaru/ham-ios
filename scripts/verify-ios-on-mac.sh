@@ -93,17 +93,33 @@ fi
 echo "  simulator: $UDID ($state -> booted)"
 
 # --- dependencies ----------------------------------------------------------
-# node_modules is the slow part and does not change between pushes, so reuse the
-# long-lived checkout's copy through a symlink rather than re-fetching it. The
-# archive deliberately carries no node_modules, so this is the only way it gets
-# there.
+# node_modules and Pods are the slow parts and do not change between pushes, so
+# reuse the long-lived checkout's copies through symlinks rather than refetching
+# them. The archive carries neither, since both are generated and gitignored.
+#
+# Reusing Pods means the pod xcconfig files still point at the long-lived
+# checkout's paths, so this build is a *does it compile, install and run* check
+# and not a clean one. That division is deliberate: the publishable artifact is
+# built by CI, which does its own `pod install` on a runner and therefore carries
+# no local path at all. A gate that did a fresh pod install on every push would
+# cost minutes each time and would still not be checking the thing that matters,
+# which is whether the app starts.
 if [ -e "$HOME/ham-rn/node_modules" ]; then
   rm -rf "$WORK/node_modules"
   ln -s "$HOME/ham-rn/node_modules" "$WORK/node_modules"
 else
-  echo "  installing dependencies (first run on this machine)"
-  (cd "$WORK" && pnpm install --frozen-lockfile) || { echo "  install failed"; exit 1; }
+  echo "  installing node dependencies (first run on this machine)"
+  (cd "$WORK" && pnpm install --frozen-lockfile) || { echo "  pnpm install failed"; exit 1; }
 fi
+
+if [ -d "$HOME/ham-rn/ios/Pods" ]; then
+  rm -rf "$WORK/ios/Pods"
+  ln -s "$HOME/ham-rn/ios/Pods" "$WORK/ios/Pods"
+else
+  echo "  installing pods (first run on this machine)"
+  (cd "$WORK/ios" && pod install --no-repo-update) || { echo "  pod install failed"; exit 1; }
+fi
+
 (cd "$WORK" && pnpm embed) >/dev/null 2>&1 || echo "  (embed reported a problem, continuing)"
 
 APP_DIR="$WORK/ios/build/Products/Release-iphonesimulator/Ham.app"

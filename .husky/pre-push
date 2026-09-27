@@ -22,3 +22,13 @@ while read local_ref local_sha remote_ref remote_sha; do
     exit 1
   fi
 done
+
+# Everything else, on every push. A commit reached the public repository twice in
+# one session with an author email that a history rewrite had just removed, and
+# the second time everything else was green. "Did I verify?" living only in
+# whoever is pushing is not a control; running the check here is.
+if [ "${HAM_SKIP_GATE:-}" = "1" ]; then
+  echo "HAM_SKIP_GATE=1 -- verification skipped. This is a decision, not an oversight." >&2
+  exit 0
+fi
+exec node scripts/verify-prepush.mjs

@@ -2,12 +2,12 @@
 
 [![React Native](https://img.shields.io/badge/React%20Native-0.87-61DAFB?logo=react&logoColor=white)](https://reactnative.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Lint](https://github.com/yasunosubaru/ham-rn/actions/workflows/lint.yml/badge.svg)](https://github.com/yasunosubaru/ham-rn/actions/workflows/lint.yml)
-[![Bundle Check](https://github.com/yasunosubaru/ham-rn/actions/workflows/compile-check.yml/badge.svg)](https://github.com/yasunosubaru/ham-rn/actions/workflows/compile-check.yml)
-[![Android Build](https://github.com/yasunosubaru/ham-rn/actions/workflows/android-build.yml/badge.svg)](https://github.com/yasunosubaru/ham-rn/actions/workflows/android-build.yml)
-[![iOS Build](https://github.com/yasunosubaru/ham-rn/actions/workflows/ios-build.yml/badge.svg)](https://github.com/yasunosubaru/ham-rn/actions/workflows/ios-build.yml)
-[![iOS TestFlight](https://github.com/yasunosubaru/ham-rn/actions/workflows/ios-testflight.yml/badge.svg)](https://github.com/yasunosubaru/ham-rn/actions/workflows/ios-testflight.yml)
-[![License](https://img.shields.io/github/license/yasunosubaru/ham-rn)](./LICENSE)
+[![Lint](https://github.com/yasunosubaru/ham-ios/actions/workflows/lint.yml/badge.svg)](https://github.com/yasunosubaru/ham-ios/actions/workflows/lint.yml)
+[![Bundle Check](https://github.com/yasunosubaru/ham-ios/actions/workflows/compile-check.yml/badge.svg)](https://github.com/yasunosubaru/ham-ios/actions/workflows/compile-check.yml)
+[![Android Build](https://github.com/yasunosubaru/ham-ios/actions/workflows/android-build.yml/badge.svg)](https://github.com/yasunosubaru/ham-ios/actions/workflows/android-build.yml)
+[![iOS Build](https://github.com/yasunosubaru/ham-ios/actions/workflows/ios-build.yml/badge.svg)](https://github.com/yasunosubaru/ham-ios/actions/workflows/ios-build.yml)
+[![iOS TestFlight](https://github.com/yasunosubaru/ham-ios/actions/workflows/ios-testflight.yml/badge.svg)](https://github.com/yasunosubaru/ham-ios/actions/workflows/ios-testflight.yml)
+[![License](https://img.shields.io/github/license/yasunosubaru/ham-ios)](./LICENSE)
 [![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/whu-ham/ham-rn/1-overview)
 
 A React Native component monorepo for the Ham app, providing education-related features with over-the-air (OTA) hot update support.

@@ -22,10 +22,13 @@ set -uo pipefail
 
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
-# node is not on the default PATH on this machine, and the simulator discovery
-# below uses it. A gate that fails for want of a PATH entry gets skipped, and a
-# skipped gate is worse than no gate.
-export PATH="$HOME/.local/node/bin:$PATH"
+# node and cocoapods are not on the default PATH here, and the gate needs both.
+# Globs rather than pinned version directories, so a ruby upgrade on the build
+# machine does not turn into "pod: command not found" and a gate failure that
+# has nothing to do with the code -- which is the kind that gets bypassed.
+for extra in "$HOME"/.local/ruby-*/bin "$HOME"/.local/node/bin; do
+  [ -d "$extra" ] && export PATH="$extra:$PATH"
+done
 
 SYNC_FROM=""
 while [ $# -gt 0 ]; do
@@ -41,6 +44,11 @@ LOG=/tmp/ham-prepush-build.log
 
 command -v node >/dev/null 2>&1 || { echo "  node not found on PATH" >&2; exit 1; }
 command -v xcrun >/dev/null 2>&1 || { echo "  xcrun not found -- not macOS?" >&2; exit 1; }
+command -v pod >/dev/null 2>&1 || {
+  echo "  pod not found on PATH; searched: $PATH" >&2
+  echo "  install cocoapods, or put it on PATH" >&2
+  exit 1
+}
 
 # Pick a simulator and make sure it is running.
 #

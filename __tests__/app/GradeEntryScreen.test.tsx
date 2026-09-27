@@ -143,7 +143,7 @@ describe('what the grade entry screen does with a reply', () => {
     );
   };
 
-  it('shows the endpoint and the fields that came back', async () => {
+  it('names the fields it knows, by the labels the page defines', async () => {
     await openWithSession();
 
     const onResult = webViewProps.current.onResult as (r: {
@@ -151,22 +151,104 @@ describe('what the grade entry screen does with a reply', () => {
       url: string;
     }) => void;
     onResult({
-      body: JSON.stringify({items: [{kcmc: '高等数学', xh: '20260001'}]}),
+      body: JSON.stringify({
+        items: [{kch: 'MATH101', kcmc: '高等数学', xf: '5.0', xm: '未知字段'}],
+      }),
       url: 'https://jwgl.whu.edu.cn/cjcx/cjcx_cxXsgrcj.html?doType=query',
     });
 
-    await waitFor(() =>
-      // Rendered as key/value pairs, not as named fields: the reply's own field
-      // names could not be established without a teacher account, and inventing
-      // them would present guesses as a contract.
-      expect(screen.getByText('items')).toBeOnTheScreen(),
-    );
-    expect(screen.getByText('kcmc')).toBeOnTheScreen();
+    await waitFor(() => expect(screen.getByText('课程名称')).toBeOnTheScreen());
+    // The page's own column labels, not a reading of the field names.
+    expect(screen.getByText('课程代码')).toBeOnTheScreen();
+    expect(screen.getByText('学分')).toBeOnTheScreen();
     expect(screen.getByText('高等数学')).toBeOnTheScreen();
     // The label carries the path and query, not the host, so it stays readable.
     expect(
       screen.getByText('接口 /cjcx/cjcx_cxXsgrcj.html?doType=query'),
     ).toBeOnTheScreen();
+  });
+
+  it('calls a reply with no student id a course list', async () => {
+    await openWithSession();
+
+    const onResult = webViewProps.current.onResult as (r: {
+      body: string;
+      url: string;
+    }) => void;
+    onResult({
+      body: JSON.stringify({items: [{kcmc: '高等数学'}, {kcmc: '大学物理'}]}),
+      url: 'https://jwgl.whu.edu.cn/cjcx/cjcx_cxXsgrcj.html',
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText('共 2 条课程')).toBeOnTheScreen(),
+    );
+  });
+
+  it('calls a reply with student ids a roster', async () => {
+    // The two are told apart by whether a student id is present, which is the
+    // one structural difference the page's own column model makes visible
+    // before any reply has been seen.
+    await openWithSession();
+
+    const onResult = webViewProps.current.onResult as (r: {
+      body: string;
+      url: string;
+    }) => void;
+    onResult({
+      body: JSON.stringify({
+        items: [{xh: '20260001', xm: '某某', bfzcj: '92'}],
+      }),
+      url: 'https://jwgl.whu.edu.cn/cjcx/cjcx_cxXsgrcj.html',
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText('共 1 名学生')).toBeOnTheScreen(),
+    );
+    expect(screen.getByText('总评成绩')).toBeOnTheScreen();
+  });
+
+  it('says how many fields it did not recognise, instead of dropping them', async () => {
+    // A field outside the vocabulary is a fact about the reply. Hiding it would
+    // make the screen look complete when it is not.
+    await openWithSession();
+
+    const onResult = webViewProps.current.onResult as (r: {
+      body: string;
+      url: string;
+    }) => void;
+    onResult({
+      body: JSON.stringify({
+        items: [{kcmc: '高等数学', unknownA: '1', unknownB: '2'}],
+      }),
+      url: 'https://jwgl.whu.edu.cn/cjcx/cjcx_cxXsgrcj.html',
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText('另有 2 个未收录字段')).toBeOnTheScreen(),
+    );
+  });
+
+  it('shows a reply that is not a list, rather than an empty screen', async () => {
+    // A status or a count is still information. Replacing it with "nothing to
+    // display" would throw away the only thing the endpoint said.
+    await openWithSession();
+
+    const onResult = webViewProps.current.onResult as (r: {
+      body: string;
+      url: string;
+    }) => void;
+    onResult({
+      body: JSON.stringify({status: true, count: 0}),
+      url: 'https://jwgl.whu.edu.cn/cjcx/cjcx_cxXxCount.html',
+    });
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('这个接口没有返回列表，原文如下：'),
+      ).toBeOnTheScreen(),
+    );
+    expect(screen.getByText('count')).toBeOnTheScreen();
   });
 
   it('says so when the endpoint answered with nothing readable', async () => {

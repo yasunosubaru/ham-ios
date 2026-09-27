@@ -68,11 +68,17 @@
     },
     "grades": {
       "back_to_page": "Back to the education page",
-      "description": "The teacher view is the same page as the student score query, branched by the server on your account's role. What the education system actually returned is shown here, with no guessed field names.",
+      "course_rows": "{{count}} courses",
+      "description": "The teacher view is the same page as the student score query, branched by the server on your account's role. Fields this app knows are shown by name; anything else is called out rather than hidden.",
       "empty": "Nothing returned yet. Use the page above to run a query.",
       "endpoint": "Endpoint {{url}}",
+      "extra_fields": "{{count}} field(s) not in the vocabulary",
+      "no_list": "This endpoint returned no list. The raw reply:",
       "page_notice": "Work in the page above; the app reads what it returns.",
       "read_only": "This reads what the page returns and submits nothing to the education system.",
+      "roster_rows": "{{count}} students",
+      "row_without_known_fields": "This row has no recognised fields",
+      "show_all": "Show all {{count}}",
       "title": "Grade entry",
       "unavailable": "The education system returned nothing readable. Sign in again and retry."
     },

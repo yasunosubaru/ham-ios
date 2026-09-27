@@ -1,6 +1,6 @@
 import React from 'react';
 import {Appearance, Linking, Platform} from 'react-native';
-import {fireEvent, render, screen} from '@testing-library/react-native';
+import {render, screen, waitFor} from '@testing-library/react-native';
 import CookieManager from '@preeternal/react-native-cookie-manager';
 import type {Cookie} from '@preeternal/react-native-cookie-manager';
 import CasMobileLoginView from '@/components/cas/CasMobileLoginView';
@@ -50,7 +50,7 @@ interface MockCookies {
 
 const cookieManager = CookieManager as unknown as MockCookies;
 const casMobileLoginModule = CasMobileLoginModule as unknown as {
-  onRequestSuccess: jest.Mock;
+  onLoginSuccess: jest.Mock;
 };
 
 /** Narrow the untyped `props` bag of the mocked WebView host element. */
@@ -58,10 +58,9 @@ const webviewProps = () =>
   screen.getByTestId('webview').props as unknown as {
     source: {uri: string};
     injectedJavaScript: string;
-    onMessage: (event: {nativeEvent: {data: string}}) => void;
     onShouldStartLoadWithRequest: (request: {url: string}) => boolean;
     webviewDebuggingEnabled: boolean;
-    style: {backgroundColor: string};
+    style: {backgroundColor?: string};
   };
 
 const cookie = (
@@ -77,9 +76,6 @@ const setPlatform = (os: 'ios' | 'android') => {
     writable: true,
   });
 };
-
-const messageData = (username: string, password: string, type: string) =>
-  JSON.stringify({type: 'postMessage', data: {username, password, type}});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -111,9 +107,11 @@ describe('initial render', () => {
     expect(webviewProps().injectedJavaScript.length).toBeGreaterThan(0);
   });
 
-  it('injects a script that posts messages back to native', async () => {
+  it('does not send page credentials across the React Native bridge', async () => {
     await render(<CasMobileLoginView />);
-    expect(webviewProps().injectedJavaScript).toContain('postMessage');
+    expect(webviewProps().injectedJavaScript).not.toContain(
+      'ReactNativeWebView.postMessage',
+    );
   });
 
   it('injects a script that targets the password login form', async () => {
@@ -146,6 +144,13 @@ describe('cookie clearing on mount', () => {
     expect(cookieManager.clearAll).toHaveBeenCalledWith(true);
   });
 
+  it('does not mount the WebView when cookie clearing fails', async () => {
+    cookieManager.clearAll.mockResolvedValueOnce(false);
+    await render(<CasMobileLoginView />);
+    expect(screen.queryByTestId('webview')).toBeNull();
+    expect(screen.getByTestId('cookie-clear-retry')).toBeTruthy();
+  });
+
   it('does not clear cookies again on re-render', async () => {
     const view = await render(<CasMobileLoginView />);
     view.rerender(<CasMobileLoginView />);
@@ -154,60 +159,20 @@ describe('cookie clearing on mount', () => {
   });
 });
 
-describe('onMessage', () => {
-  it('stores credentials sent by the page', async () => {
-    await render(<CasMobileLoginView />);
-    await fireEvent(screen.getByTestId('webview'), 'message', {
-      nativeEvent: {
-        data: messageData('2021302111001', 'secret', 'login'),
-      },
-    });
+describe('login completion', () => {
+  it('notifies the host without passing page credentials to native', async () => {
+    const onLoginSuccess = jest.fn();
+    cookieManager.getAll.mockResolvedValue({cas: cookie('cas', 'session')});
+    await render(<CasMobileLoginView onLoginSuccess={onLoginSuccess} />);
     webviewProps().onShouldStartLoadWithRequest({
       url: 'https://cas.whu.edu.cn/authserver/mobile/default.html?mobile_token=abc123',
     });
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(casMobileLoginModule.onRequestSuccess).toHaveBeenCalledWith(
-      '2021302111001',
-      'secret',
-      '',
-    );
-  });
-
-  it('ignores messages that are not postMessage events', async () => {
-    await render(<CasMobileLoginView />);
-    await fireEvent(screen.getByTestId('webview'), 'message', {
-      nativeEvent: {
-        data: JSON.stringify({
-          type: 'other',
-          data: {username: 'u', password: 'p'},
-        }),
-      },
+    await waitFor(() => {
+      expect(casMobileLoginModule.onLoginSuccess).toHaveBeenCalledWith(
+        'cas=session',
+      );
+      expect(onLoginSuccess).toHaveBeenCalledTimes(1);
     });
-    webviewProps().onShouldStartLoadWithRequest({
-      url: 'https://cas.whu.edu.cn/authserver/mobile/default.html?mobile_token=abc123',
-    });
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(casMobileLoginModule.onRequestSuccess).toHaveBeenCalledWith(
-      '',
-      '',
-      '',
-    );
-  });
-
-  it('falls back to empty strings when no credentials were sent', async () => {
-    await render(<CasMobileLoginView />);
-    webviewProps().onShouldStartLoadWithRequest({
-      url: 'https://cas.whu.edu.cn/authserver/mobile/default.html?mobile_token=abc123',
-    });
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(casMobileLoginModule.onRequestSuccess).toHaveBeenCalledWith(
-      '',
-      '',
-      '',
-    );
   });
 });
 
@@ -222,7 +187,7 @@ describe('onShouldStartLoadWithRequest token extraction', () => {
         url: 'https://cas.whu.edu.cn/authserver/mobile/auth?appId=985180443',
       }),
     ).toBe(true);
-    expect(casMobileLoginModule.onRequestSuccess).not.toHaveBeenCalled();
+    expect(casMobileLoginModule.onLoginSuccess).not.toHaveBeenCalled();
   });
 
   it('allows navigation when the success path has no token', async () => {
@@ -232,7 +197,7 @@ describe('onShouldStartLoadWithRequest token extraction', () => {
         url: 'https://cas.whu.edu.cn/authserver/mobile/default.html',
       }),
     ).toBe(true);
-    expect(casMobileLoginModule.onRequestSuccess).not.toHaveBeenCalled();
+    expect(casMobileLoginModule.onLoginSuccess).not.toHaveBeenCalled();
   });
 
   it('allows navigation when the token is empty', async () => {
@@ -240,7 +205,7 @@ describe('onShouldStartLoadWithRequest token extraction', () => {
     expect(
       webviewProps().onShouldStartLoadWithRequest({url: success('')}),
     ).toBe(true);
-    expect(casMobileLoginModule.onRequestSuccess).not.toHaveBeenCalled();
+    expect(casMobileLoginModule.onLoginSuccess).not.toHaveBeenCalled();
   });
 
   it('blocks navigation for the success path with a token', async () => {
@@ -250,12 +215,82 @@ describe('onShouldStartLoadWithRequest token extraction', () => {
     ).toBe(false);
   });
 
+  it('does not treat a token on another host as a CAS success', async () => {
+    await render(<CasMobileLoginView />);
+    expect(
+      webviewProps().onShouldStartLoadWithRequest({
+        url: 'https://evil.example/authserver/mobile/default.html?mobile_token=abc123',
+      }),
+    ).toBe(true);
+    expect(casMobileLoginModule.onLoginSuccess).not.toHaveBeenCalled();
+  });
+
   it('blocks navigation for a URL-encoded token', async () => {
     await render(<CasMobileLoginView />);
     const url =
       'https://cas.whu.edu.cn/authserver/mobile/default.html?mobile_token=' +
       encodeURIComponent('ab/c 123');
     expect(webviewProps().onShouldStartLoadWithRequest({url})).toBe(false);
+  });
+});
+
+/**
+ * What CAS actually does, verified against the live server:
+ *   GET /authserver/mobile/callback?appId=985180443
+ *     -> 302 Location: /authserver/mobile/default.html#mobile_token=...
+ * The token rides in the fragment. The cases above use the query form, so they
+ * pass whether or not the fragment is handled; these fail if it is not.
+ */
+describe('token in the URL fragment, as CAS really redirects', () => {
+  const fragmentUrl = (token: string) =>
+    `https://cas.whu.edu.cn/authserver/mobile/default.html#mobile_token=${token}`;
+
+  it('blocks navigation when the token arrives in the fragment', async () => {
+    await render(<CasMobileLoginView />);
+    expect(
+      webviewProps().onShouldStartLoadWithRequest({url: fragmentUrl('abc123')}),
+    ).toBe(false);
+  });
+
+  it('stores the cookie and notifies the host on a fragment token', async () => {
+    const onLoginSuccess = jest.fn();
+    cookieManager.getAll.mockResolvedValue({cas: cookie('cas', 'session')});
+    await render(<CasMobileLoginView onLoginSuccess={onLoginSuccess} />);
+    webviewProps().onShouldStartLoadWithRequest({url: fragmentUrl('abc123')});
+    await waitFor(() => {
+      expect(casMobileLoginModule.onLoginSuccess).toHaveBeenCalledWith(
+        'cas=session',
+      );
+      expect(onLoginSuccess).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('does not treat the literal null fragment as a login', async () => {
+    // This is where CAS redirects when there is no session.
+    await render(<CasMobileLoginView />);
+    expect(
+      webviewProps().onShouldStartLoadWithRequest({url: fragmentUrl('null')}),
+    ).toBe(true);
+    expect(casMobileLoginModule.onLoginSuccess).not.toHaveBeenCalled();
+  });
+
+  it('does not treat a fragment token on another host as a CAS success', async () => {
+    await render(<CasMobileLoginView />);
+    expect(
+      webviewProps().onShouldStartLoadWithRequest({
+        url: 'https://evil.example/authserver/mobile/default.html#mobile_token=abc123',
+      }),
+    ).toBe(true);
+    expect(casMobileLoginModule.onLoginSuccess).not.toHaveBeenCalled();
+  });
+
+  it('keeps the query form working', async () => {
+    await render(<CasMobileLoginView />);
+    expect(
+      webviewProps().onShouldStartLoadWithRequest({
+        url: 'https://cas.whu.edu.cn/authserver/mobile/default.html?mobile_token=abc123',
+      }),
+    ).toBe(false);
   });
 });
 
@@ -278,11 +313,7 @@ describe('cookie retrieval by platform', () => {
     await Promise.resolve();
     expect(cookieManager.getAll).toHaveBeenCalledWith(true);
     expect(cookieManager.get).not.toHaveBeenCalled();
-    expect(casMobileLoginModule.onRequestSuccess).toHaveBeenCalledWith(
-      '',
-      '',
-      'keep=v1',
-    );
+    expect(casMobileLoginModule.onLoginSuccess).toHaveBeenCalledWith('keep=v1');
   });
 
   it('joins several iOS cookies with a semicolon', async () => {
@@ -295,11 +326,7 @@ describe('cookie retrieval by platform', () => {
     triggerSuccess();
     await Promise.resolve();
     await Promise.resolve();
-    expect(casMobileLoginModule.onRequestSuccess).toHaveBeenCalledWith(
-      '',
-      '',
-      'a=1;b=2',
-    );
+    expect(casMobileLoginModule.onLoginSuccess).toHaveBeenCalledWith('a=1;b=2');
   });
 
   it('reads cookies by URL on Android and uses them as-is', async () => {
@@ -316,11 +343,7 @@ describe('cookie retrieval by platform', () => {
       'https://cas.whu.edu.cn/authserver',
     );
     expect(cookieManager.getAll).not.toHaveBeenCalled();
-    expect(casMobileLoginModule.onRequestSuccess).toHaveBeenCalledWith(
-      '',
-      '',
-      'a=1;b=2',
-    );
+    expect(casMobileLoginModule.onLoginSuccess).toHaveBeenCalledWith('a=1;b=2');
   });
 
   it('does not query cookies at all on other platforms', async () => {
@@ -331,12 +354,13 @@ describe('cookie retrieval by platform', () => {
     await Promise.resolve();
     expect(cookieManager.getAll).not.toHaveBeenCalled();
     expect(cookieManager.get).not.toHaveBeenCalled();
-    expect(casMobileLoginModule.onRequestSuccess).not.toHaveBeenCalled();
+    expect(casMobileLoginModule.onLoginSuccess).not.toHaveBeenCalled();
   });
 });
 
 describe('login guard', () => {
   it('reports success only for the first token URL', async () => {
+    cookieManager.getAll.mockResolvedValue({cas: cookie('cas', 'session')});
     await render(<CasMobileLoginView />);
     const url =
       'https://cas.whu.edu.cn/authserver/mobile/default.html?mobile_token=tok';
@@ -346,7 +370,9 @@ describe('login guard', () => {
     expect(webviewProps().onShouldStartLoadWithRequest({url})).toBe(true);
     await Promise.resolve();
     await Promise.resolve();
-    expect(casMobileLoginModule.onRequestSuccess).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(casMobileLoginModule.onLoginSuccess).toHaveBeenCalledTimes(1);
+    });
   });
 });
 
@@ -361,7 +387,7 @@ describe('privacy policy', () => {
     ).toBe(false);
     await Promise.resolve();
     expect(openURL).toHaveBeenCalledWith(PRIVACY_POLICY_URL);
-    expect(casMobileLoginModule.onRequestSuccess).not.toHaveBeenCalled();
+    expect(casMobileLoginModule.onLoginSuccess).not.toHaveBeenCalled();
     openURL.mockRestore();
   });
 

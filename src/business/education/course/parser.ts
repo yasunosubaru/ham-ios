@@ -229,7 +229,7 @@ const toNativeCoursePairing = (courseListResult: {
     if (courseGridList.length === 0) {
       Log.e(
         'toNativeCoursePairing',
-        `dropped empty-grid course: name=${course.name}`,
+        `dropped course without a time grid (count=${ignoredCourseList.length + 1})`,
       );
       ignoredCourseList.push(course);
       continue;

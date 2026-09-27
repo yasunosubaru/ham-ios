@@ -1,0 +1,59 @@
+appId: com.nowcent.ham.rn
+name: Standalone Ham production entry
+tags:
+  - smoke
+  - production
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: home-title
+    timeout: 60000
+
+- tapOn:
+    id: course-schedule
+- assertVisible:
+    id: back-button
+
+- tapOn:
+    id: back-button
+- tapOn:
+    id: scores
+- assertVisible:
+    id: back-button
+
+- tapOn:
+    id: back-button
+- tapOn:
+    id: calculator
+- assertVisible:
+    id: calculator-add-course
+- assertVisible:
+    id: calculator-course-name
+- tapOn:
+    id: back-button
+
+# Weather is the one card that needs no login, so it has to be reachable on a
+# cleared state. Only the header is asserted: the screen fills in from a network
+# call, and a smoke run that fails because the weather API is slow is testing
+# the network, not the app.
+- tapOn:
+    id: weather
+- assertVisible:
+    id: back-button
+
+# Back to the list before the next card. Every other entry here taps back
+# between cards; skipping this one left the flow on the weather screen, where
+# there is no `library` element to find -- which is what it reported, as a
+# missing element rather than as "still on the previous screen".
+- tapOn:
+    id: back-button
+
+# Library is behind the university session like the other two, so on a cleared
+# state it opens the sign-in view rather than the booking screen. Either way the
+# header is what gets asserted, for the same reason as weather.
+- tapOn:
+    id: library
+- assertVisible:
+    id: back-button

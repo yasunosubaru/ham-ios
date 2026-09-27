@@ -1,10 +1,7 @@
 package com.nowcent.ham.rndebug.module
 
-import android.util.Log
+import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.bridge.ReactContextBaseJavaModule
-import com.facebook.react.bridge.ReactMethod
-import com.facebook.react.module.annotations.ReactModule
 import com.nowcent.ham.rn.nativemodule.NativeCasMobileLoginModuleSpec
 
 /**
@@ -15,11 +12,12 @@ import com.nowcent.ham.rn.nativemodule.NativeCasMobileLoginModuleSpec
 class RNCasMobileLoginModule(reactContext: ReactApplicationContext) :
     NativeCasMobileLoginModuleSpec(reactContext) {
 
-    override fun onRequestSuccess(studentId: String, password: String, cookie: String) {
+    override fun onLoginSuccess(cookie: String, promise: Promise) {
+        if (cookie.isEmpty()) {
+            promise.resolve(false)
+            return
+        }
         casCookie = cookie
-        Log.i(
-            "RNCasMobileLoginModule",
-            "onRequestSuccess, studentId=$studentId, password=$password, cookie=$cookie"
-        )
+        promise.resolve(true)
     }
 }

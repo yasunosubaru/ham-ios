@@ -1,11 +1,9 @@
 package com.nowcent.ham.rndebug.module
 
-import android.util.Log
+import android.webkit.CookieManager
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.bridge.ReactContextBaseJavaModule
-import com.facebook.react.bridge.ReactMethod
-import com.facebook.react.module.annotations.ReactModule
+import com.facebook.react.bridge.UiThreadUtil
 import com.nowcent.ham.rn.nativemodule.NativeCasModuleSpec
 
 /**
@@ -18,8 +16,16 @@ var casCookie: String = ""
 class RNCasModule(reactContext: ReactApplicationContext) :
     NativeCasModuleSpec(reactContext) {
 
-    override fun requestCasCookie(): String {
-        Log.i("RNCasModule", "requestCasCookie: cookie=$casCookie")
-        return casCookie
+    override fun clearCasCookie(promise: Promise) {
+        casCookie = ""
+        UiThreadUtil.runOnUiThread {
+            val cookieManager = CookieManager.getInstance()
+            cookieManager.removeAllCookies {
+                cookieManager.flush()
+                promise.resolve(true)
+            }
+        }
     }
+
+    override fun requestCasCookie(): String = casCookie
 }

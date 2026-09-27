@@ -5,7 +5,24 @@
 #import <React/RCTRootView.h>
 
 #define TIMEOUT_SECONDS 600
-#define TEXT_TO_LOOK_FOR @"Welcome to React"
+#define TEXT_TO_LOOK_FOR @"home-title"
+
+// The window belongs to SceneDelegate, not to the app delegate, because the
+// UIScene lifecycle moved window creation out of application:didFinishLaunching.
+static UIWindow *HamKeyWindow(void)
+{
+  for (UIScene *scene in RCTSharedApplication().connectedScenes) {
+    if (![scene isKindOfClass:UIWindowScene.class]) {
+      continue;
+    }
+    for (UIWindow *window in ((UIWindowScene *)scene).windows) {
+      if (window.isKeyWindow) {
+        return window;
+      }
+    }
+  }
+  return nil;
+}
 
 @interface ham_rnTests : XCTestCase
 
@@ -26,9 +43,11 @@
   return NO;
 }
 
-- (void)testRendersWelcomeScreen
+- (void)testRendersStandaloneHomeScreen
 {
-  UIViewController *vc = [[[RCTSharedApplication() delegate] window] rootViewController];
+  UIWindow *window = HamKeyWindow();
+  XCTAssertNotNil(window, @"No key window: the scene never connected a view controller.");
+  UIViewController *vc = window.rootViewController;
   NSDate *date = [NSDate dateWithTimeIntervalSinceNow:TIMEOUT_SECONDS];
   BOOL foundElement = NO;
 
@@ -48,7 +67,7 @@
 
     foundElement = [self findSubviewInView:vc.view
                                   matching:^BOOL(UIView *view) {
-                                    if ([view.accessibilityLabel isEqualToString:TEXT_TO_LOOK_FOR]) {
+                                    if ([view.accessibilityIdentifier isEqualToString:TEXT_TO_LOOK_FOR]) {
                                       return YES;
                                     }
                                     return NO;
@@ -60,7 +79,7 @@
 #endif
 
   XCTAssertNil(redboxError, @"RedBox error: %@", redboxError);
-  XCTAssertTrue(foundElement, @"Couldn't find element with text '%@' in %d seconds", TEXT_TO_LOOK_FOR, TIMEOUT_SECONDS);
+  XCTAssertTrue(foundElement, @"Couldn't find element with identifier '%@' in %d seconds", TEXT_TO_LOOK_FOR, TIMEOUT_SECONDS);
 }
 
 @end

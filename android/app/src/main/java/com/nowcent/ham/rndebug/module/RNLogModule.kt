@@ -6,6 +6,7 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.module.annotations.ReactModule
 import com.nowcent.ham.rn.nativemodule.NativeLogSpec
+import com.nowcent.ham.rndebug.BuildConfig
 
 /**
  * @author orangeboyChen
@@ -15,11 +16,15 @@ import com.nowcent.ham.rn.nativemodule.NativeLogSpec
 class RNLogModule(reactContext: ReactApplicationContext) : NativeLogSpec(reactContext) {
 
     override fun i(tag: String, message: String) {
-        Log.i(tag.makeTag(), message)
+        if (BuildConfig.DEBUG) {
+            Log.i(tag.makeTag(), message)
+        }
     }
 
     override fun e(tag: String, message: String) {
-        Log.e(tag.makeTag(), message)
+        if (BuildConfig.DEBUG) {
+            Log.e(tag.makeTag(), message)
+        }
     }
 
     private fun String.makeTag() = "[ReactNative]$this"

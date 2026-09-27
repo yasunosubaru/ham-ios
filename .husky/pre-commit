@@ -1,1 +1,28 @@
+#!/bin/sh
+# Refuse to create a commit under anything but the account's noreply identity.
+#
+# This repository is public, and rewriting its history to remove a personal
+# address was the whole point of that. `git config user.email` is a mutable
+# global, and it was left pointing at that address twice in one session -- once
+# because a self-test failed midway and its restore in the same block never ran.
+# Both times the next commit carried the address straight back into a public
+# repository, and both times the history had to be rewritten again.
+#
+# The check belongs here rather than in `.git/hooks`, because this repository
+# sets `core.hooksPath = .husky/_`, so a hook written to `.git/hooks` is never
+# executed at all. That is not a hypothetical: a guard placed there looked
+# installed, was reported as working, and did nothing.
+#
+# It also belongs before lint-staged, so a rejected commit costs nothing.
+ident="$(git var GIT_AUTHOR_IDENT 2>/dev/null | sed -n 's/.*<\([^>]*\)>.*/\1/p')"
+case "$ident" in
+  *@users.noreply.github.com) ;;
+  *)
+    echo "refusing to commit: author email is <$ident>, not a users.noreply.github.com address" >&2
+    echo "  fix with: git config user.name  yasunosubaru" >&2
+    echo "         git config user.email yasunosubaru@users.noreply.github.com" >&2
+    exit 1
+    ;;
+esac
+
 pnpm lint-staged

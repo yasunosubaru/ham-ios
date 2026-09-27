@@ -8,6 +8,29 @@ const commonHeader: {[key: string]: string} = {
 };
 
 const TAG = 'Request';
+const REDACTED_VALUE = '[REDACTED]';
+const SENSITIVE_HEADER_NAMES = new Set([
+  'authorization',
+  'cookie',
+  'proxy-authorization',
+  'set-cookie',
+  'x-api-key',
+  'x-auth-token',
+]);
+const SENSITIVE_QUERY_PARAMETERS = new Set([
+  'access_token',
+  'api_key',
+  'code',
+  'id_token',
+  'mobile_token',
+  'nonce',
+  'password',
+  'refresh_token',
+  'secret',
+  'state',
+  'ticket',
+  'token',
+]);
 
 /**
  * xlog formats every entry into a 16KB stack buffer and drops the entry
@@ -84,6 +107,57 @@ const logChunked = (
   });
 };
 
+const SENSITIVE_PARAMETER_PATTERN = Array.from(SENSITIVE_QUERY_PARAMETERS).join(
+  '|',
+);
+const SENSITIVE_ASSIGNMENT = new RegExp(
+  `\\b(${SENSITIVE_PARAMETER_PATTERN})=([^\\s&#]*)`,
+  'gi',
+);
+const SENSITIVE_PATH = new RegExp(
+  `\\/(?:${SENSITIVE_PARAMETER_PATTERN})\\/[^\\s/?#]+`,
+  'gi',
+);
+const SENSITIVE_HEADER_TEXT =
+  /\b(authorization|cookie)\s*[:=]\s*(?:bearer\s+)?[^\r\n,;]+/gi;
+
+export const redactSensitiveText = (value: string): string =>
+  value
+    .replace(SENSITIVE_ASSIGNMENT, `$1=${encodeURIComponent(REDACTED_VALUE)}`)
+    .replace(SENSITIVE_PATH, `/${encodeURIComponent(REDACTED_VALUE)}`)
+    .replace(SENSITIVE_HEADER_TEXT, `$1: ${REDACTED_VALUE}`);
+
+const redactQuery = (query: string): string =>
+  query
+    .split('&')
+    .map(parameter => {
+      const separator = parameter.indexOf('=');
+      const rawName =
+        separator === -1 ? parameter : parameter.slice(0, separator);
+      let name = rawName;
+      try {
+        name = decodeURIComponent(rawName);
+      } catch {}
+      return SENSITIVE_QUERY_PARAMETERS.has(name.toLowerCase())
+        ? `${rawName}=${encodeURIComponent(REDACTED_VALUE)}`
+        : parameter;
+    })
+    .join('&');
+
+const redactUrl = (value: string): string => {
+  const hashIndex = value.indexOf('#');
+  const main = hashIndex === -1 ? value : value.slice(0, hashIndex);
+  const fragment = hashIndex === -1 ? '' : value.slice(hashIndex + 1);
+  const queryStart = main.indexOf('?');
+  const redactedMain =
+    queryStart === -1
+      ? main
+      : `${main.slice(0, queryStart)}?${redactQuery(main.slice(queryStart + 1))}`;
+  return redactSensitiveText(
+    `${redactedMain}${fragment ? `#${redactQuery(fragment)}` : ''}`,
+  );
+};
+
 const stringifyHeaders = (
   headers?: [string, string][] | Record<string, string> | Headers,
 ): string => {
@@ -92,7 +166,15 @@ const stringifyHeaders = (
   }
   // React Native types this as HeadersInit_ (a record, a Headers instance or
   // an array of tuples); normalising through Headers gives one code path.
-  return JSON.stringify(Object.fromEntries(new Headers(headers)));
+  const normalized = Object.fromEntries(new Headers(headers));
+  return JSON.stringify(
+    Object.fromEntries(
+      Object.entries(normalized).map(([name, value]) => [
+        name,
+        SENSITIVE_HEADER_NAMES.has(name.toLowerCase()) ? REDACTED_VALUE : value,
+      ]),
+    ),
+  );
 };
 
 const describeUrl = (url: string | URL | globalThis.Request): string => {
@@ -114,24 +196,27 @@ const send = async (
   },
 ): Promise<Response> => {
   const target = describeUrl(url);
+  const loggedTarget = redactUrl(target);
   const startedAt = Date.now();
   logChunked(
     'i',
-    `${method} ${target}`,
+    `${method} ${loggedTarget}`,
     `headers=${stringifyHeaders(init.headers)}`,
   );
   try {
     const response = await fetch(url, {...init, method});
     Log.i(
       TAG,
-      `${method} ${target} - ${response.status} in ${Date.now() - startedAt}ms`,
+      `${method} ${loggedTarget} - ${response.status} in ${Date.now() - startedAt}ms`,
     );
     return response;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     Log.e(
       TAG,
-      `${method} ${target} - ${reason} in ${Date.now() - startedAt}ms`,
+      `${method} ${loggedTarget} - ${redactSensitiveText(
+        reason,
+      )} in ${Date.now() - startedAt}ms`,
     );
     throw error;
   }

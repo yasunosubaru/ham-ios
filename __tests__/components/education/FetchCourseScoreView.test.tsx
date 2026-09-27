@@ -390,7 +390,7 @@ describe('FetchCourseView ignored-course notice', () => {
       attempts += 1;
       if (attempts === 1) {
         return Promise.reject(
-          new CasReAuthLoginError('https://cas.example/reauth'),
+          new CasReAuthLoginError('https://cas.whu.edu.cn/reauth'),
         );
       }
       return Promise.resolve([
@@ -408,7 +408,7 @@ describe('FetchCourseView ignored-course notice', () => {
     screen
       .getByTestId('fetch-course-view-reauth')
       .props.onShouldStartLoadWithRequest({
-        url: 'https://cas.example/?ticket=ST-1',
+        url: 'https://cas.whu.edu.cn/?ticket=ST-1',
       });
 
     await waitFor(() => expect(getCourseList).toHaveBeenCalledTimes(2));
@@ -423,7 +423,7 @@ describe('FetchCourseView ignored-course notice', () => {
       attempts += 1;
       if (attempts === 1) {
         return Promise.reject(
-          new CasReAuthLoginError('https://cas.example/reauth'),
+          new CasReAuthLoginError('https://cas.whu.edu.cn/reauth'),
         );
       }
       return Promise.resolve([
@@ -443,7 +443,7 @@ describe('FetchCourseView ignored-course notice', () => {
     screen
       .getByTestId('fetch-course-view-reauth')
       .props.onShouldStartLoadWithRequest({
-        url: 'https://cas.example/?ticket=ST-1',
+        url: 'https://cas.whu.edu.cn/?ticket=ST-1',
       });
 
     await waitFor(() =>

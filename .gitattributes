@@ -2,3 +2,27 @@
 /.yarn/releases/*    binary
 /.yarn/plugins/**/*  binary
 /.pnp.*              binary linguist-generated
+
+# LF everywhere, on every platform.
+#
+# Two separate failures came out of core.autocrlf=true, and they share a cause:
+#
+#   - A .sh committed from Windows reached macOS as CRLF and failed to parse, at
+#     `case ... in`, with a message pointing eleven lines away from the cause.
+#     It would also have silently broken the husky hooks, which have no extension
+#     to key an attribute off.
+#
+#   - `git archive` applies the same conversion on export, so a committed
+#     Podfile.lock arrived as CRLF. CocoaPods compares Podfile.lock against
+#     Pods/Manifest.lock byte for byte, so the two differed on every line despite
+#     being 2113 lines each, and the build died at "[CP] Check Pods Manifest.lock"
+#     naming neither the lockfile nor the line endings.
+#
+# The second is the one that makes `* text=auto` worth having on its own: any
+# tracked file something else compares byte-wise is corrupted by a checkout-time
+# conversion, and there is no way to tell from the diff that it happened.
+#
+# `* text=auto` normalises on commit, so CRLF cannot enter the object store at
+# all. `eol=lf` then keeps the working tree and `git archive` output LF on every
+# platform, which is what the shell scripts and the byte comparison both need.
+* text=auto eol=lf

@@ -5,6 +5,7 @@
 # Xcode
 #
 build/
+/ios/artifacts/
 *.pbxuser
 !default.pbxuser
 *.mode1v3

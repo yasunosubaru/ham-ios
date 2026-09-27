@@ -92,7 +92,12 @@ describe('FetchScoreView re-auth branch', () => {
         null,
       ),
     );
-    expect(mockFetch).toHaveBeenCalledWith(TICKET_URL);
+    expect(mockFetch).toHaveBeenCalledWith(
+      TICKET_URL,
+      expect.objectContaining({
+        headers: expect.objectContaining({Cookie: ''}),
+      }),
+    );
   });
 
   // A rejection here used to report `err.message`, which is `undefined` for a

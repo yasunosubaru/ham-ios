@@ -1,46 +1,81 @@
 #import "AppDelegate.h"
 
 #import <React/RCTBundleURLProvider.h>
+#import <React/RCTLinkingManager.h>
 #import <ReactAppDependencyProvider/RCTAppDependencyProvider.h>
-#import "ham_rn-Swift.h"
 
 @implementation AppDelegate
 
-- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
+@synthesize reactNativeFactory = _reactNativeFactory;
+@synthesize initialProps = _initialProps;
+
+- (BOOL)application:(UIApplication *)application
+    didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-  self.moduleName = @"RNCasMobileLogin";
-  // You can add your custom initial props in the dictionary below.
-  // They will be passed down to the ViewController used by React Native.
-  self.initialProps = @{};
+  // The dependency provider carries the codegen module map that the factory
+  // delegate uses to resolve TurboModules, so it has to be in place before the
+  // factory builds its root view factory.
   self.dependencyProvider = [RCTAppDependencyProvider new];
 
-  // Initialize React Native infrastructure (bridgeless runtime, bundleURL, etc.)
-  [super application:application didFinishLaunchingWithOptions:launchOptions];
+  NSString *version = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"] ?: @"";
+  NSString *build = [NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleVersion"] ?: @"";
+  _initialProps = @{
+    @"appVersion": version,
+    @"buildNumber": build,
+  };
 
-  // Replace the root view controller with SwiftUI HomeView
-  // Note: Reuse the existing window created by super to keep the bridge/runtime alive
-  UIViewController *homeVC = [self makeHomeViewController];
-  self.window.rootViewController = homeVC;
-  [self.window makeKeyAndVisible];
+  _reactNativeFactory = [[RCTReactNativeFactory alloc] initWithDelegate:self];
 
   return YES;
 }
 
-/// Creates the SwiftUI HomeView wrapped in a UIHostingController.
-/// This is implemented in Swift via the bridging header.
-- (UIViewController *)makeHomeViewController
+#pragma mark - UIScene
+
+- (UISceneConfiguration *)application:(UIApplication *)application
+    configurationForConnectingSceneSession:(UISceneSession *)connectingSceneSession
+                                   options:(UISceneConnectionOptions *)options
 {
-  // Calls into Swift to create the SwiftUI HomeView
-  return [HomeViewFactory createHomeViewController];
+  UISceneConfiguration *configuration = [[UISceneConfiguration alloc] initWithName:@"Default Configuration"
+                                                                         sessionRole:connectingSceneSession.role];
+  configuration.delegateClass = NSClassFromString(@"SceneDelegate");
+  return configuration;
 }
+
+#pragma mark - RCTReactNativeFactoryDelegate
 
 - (NSURL *)bundleURL
 {
 #if DEBUG
-  return [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:@"index"];
+  return [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:@"index.debug"];
 #else
-  return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
+  return [NSBundle.mainBundle URLForResource:@"main" withExtension:@"jsbundle"];
 #endif
+}
+
+// RCTDefaultReactNativeFactoryDelegate raises from here. Bridgeless mode does
+// not call it, but the legacy bridge path does, so keep it consistent with
+// bundleURL rather than leaving a trap.
+- (NSURL *)sourceURLForBridge:(RCTBridge *)bridge
+{
+  return [self bundleURL];
+}
+
+#pragma mark - Linking
+
+- (BOOL)application:(UIApplication *)application
+            openURL:(NSURL *)url
+            options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options
+{
+  return [RCTLinkingManager application:application openURL:url options:options];
+}
+
+- (BOOL)application:(UIApplication *)application
+    continueUserActivity:(NSUserActivity *)userActivity
+      restorationHandler:(void (^)(NSArray<id<UIUserActivityRestoring>> *))restorationHandler
+{
+  return [RCTLinkingManager application:application
+                  continueUserActivity:userActivity
+                    restorationHandler:restorationHandler];
 }
 
 @end

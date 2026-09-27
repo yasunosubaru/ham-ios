@@ -8,6 +8,7 @@ import {TurboModuleRegistry} from 'react-native';
  */
 
 export interface Spec extends TurboModule {
+  clearCasCookie(): Promise<boolean>;
   requestCasCookie(): string;
 }
 

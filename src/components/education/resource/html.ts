@@ -157,7 +157,6 @@ export const html =
   "            appId: '97f21767358533b1992e4099a4c3bae6', //appId，在控制台中“应用管理”或“应用配置”模块获取\n" +
   "            apiServer: 'https://dxvip.dingxiang-inc.com', // 请填写这个配置，按照下面“接入域名”所示!注意：末尾不要有斜杆！\n" +
   '            success: function (token) {\n' +
-  "                console.log('token:', token)\n" +
   '                var message = {\n' +
   "                    'token': token\n" +
   '                }\n' +

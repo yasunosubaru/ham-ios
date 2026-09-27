@@ -1,8 +1,16 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {WebView} from 'react-native-webview';
-import {Linking, Platform} from 'react-native';
+import {
+  Alert,
+  Button,
+  Linking,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import type {StyleProp, ViewStyle} from 'react-native';
 import CasMobileLoginModule from '@/modules/NativeCasMobileLoginModule';
-import Log from '@/modules/NativeLog';
 import '@/i18n/i18n';
 import {useTranslation} from 'react-i18next';
 import type {Cookies} from '@preeternal/react-native-cookie-manager';
@@ -26,14 +34,6 @@ const buildInjectedScript = (
   accountExpiredTip: string,
   invalidUsernamePasswordTip: string,
 ) => `
-   function sendMessage(status, type, username, password) {
-      const messageBody = { username, password, type };
-      const event = {
-          type: 'postMessage',
-          data: messageBody
-      }
-      window.ReactNativeWebView.postMessage(JSON.stringify(event));
-   };
    const socialAutoLoginElement = document.getElementsByClassName('social-aut-login')[0];
    if (socialAutoLoginElement) {
        socialAutoLoginElement.remove();
@@ -50,13 +50,7 @@ const buildInjectedScript = (
    if (!usernameElement || !passwordElement || !loginElement) {
        true;
    } else {
-   usernameElement.addEventListener('change', () => {
-        sendMessage(true, 'usernameChange', usernameElement.value, passwordElement.value);
-   });
-   
-   passwordElement.addEventListener('change', () => {
-        sendMessage(true, 'passwordChange', usernameElement.value, passwordElement.value);
-   });
+
    usernameElement.setAttribute('placeholder', ${JSON.stringify(
      studentIdPlaceholder,
    )});
@@ -69,7 +63,6 @@ const buildInjectedScript = (
            utils.alertBox(${JSON.stringify(invalidStudentIdMessage)});
            return false;
        }
-       sendMessage(true, 'login', usernameElement.value, passwordElement.value);
        return originalLoginHandler.call(this, event);
    };
    if (loginElement) {
@@ -152,12 +145,6 @@ const buildInjectedScript = (
 true;
 `;
 
-interface UserInfo {
-  studentId?: string;
-  password?: string;
-}
-
-const TAG = 'CasMobileLoginView';
 const CAS_AUTH_SERVER = 'https://cas.whu.edu.cn/authserver';
 const CAS_MOBILE_LOGIN_URL = `${CAS_AUTH_SERVER}/mobile/auth?appId=985180443`;
 const CAS_MOBILE_SUCCESS_PATH = '/mobile/default.html';
@@ -173,15 +160,37 @@ const decodeUrl = (url: string) => {
 };
 
 const extractMobileToken = (url: string) => {
-  const decodedUrl = decodeUrl(url);
-  if (!decodedUrl.includes(CAS_MOBILE_SUCCESS_PATH)) {
+  try {
+    const parsed = new URL(decodeUrl(url));
+    if (
+      parsed.protocol !== 'https:' ||
+      parsed.hostname.toLowerCase() !== 'cas.whu.edu.cn' ||
+      !parsed.pathname.endsWith(CAS_MOBILE_SUCCESS_PATH)
+    ) {
+      return undefined;
+    }
+    // WHU's CAS hands the token over in the fragment, not the query string:
+    //   /authserver/mobile/callback?appId=...  ->  302  ->
+    //   /authserver/mobile/default.html#mobile_token=...
+    // URL.searchParams only covers the part before '#', so reading the query
+    // alone never sees the token and login completion is never detected — the
+    // WebView then just sits on the "Mobile" landing page. The value itself is
+    // only used as a signal; the session travels in the cookie header.
+    const fromQuery = parsed.searchParams.get('mobile_token');
+    if (fromQuery) {
+      return fromQuery;
+    }
+    const fragment = parsed.hash.replace(/^#/, '');
+    const fromFragment = new URLSearchParams(fragment).get('mobile_token');
+    // CAS emits the literal string "null" when there is no session, which is
+    // not a successful login.
+    if (!fromFragment || fromFragment === 'null') {
+      return undefined;
+    }
+    return fromFragment;
+  } catch {
     return undefined;
   }
-
-  const tokenParts = decodedUrl.split('mobile_token=', 2);
-  return tokenParts.length > 1 && tokenParts[1].length > 0
-    ? tokenParts[1]
-    : undefined;
 };
 
 const buildCookieHeader = (cookies: Cookies) =>
@@ -189,22 +198,73 @@ const buildCookieHeader = (cookies: Cookies) =>
     .map(key => `${key}=${cookies[key].value}`)
     .join(';');
 
-function CasMobileLoginView(): React.JSX.Element {
+function CasMobileLoginView({
+  onLoginSuccess,
+  style,
+}: {
+  onLoginSuccess?: () => void;
+  style?: StyleProp<ViewStyle>;
+}): React.JSX.Element {
   const {t} = useTranslation();
-  const isLoginRef = useRef(false);
+  const isLoginCompleteRef = useRef(false);
+  const isLoginPendingRef = useRef(false);
+  const webViewStyle = useWebViewStyle();
+  const [cookieClearFailed, setCookieClearFailed] = useState(false);
+  const [cookiesCleared, setCookiesCleared] = useState(false);
 
-  useEffect(() => {
-    CookieManager.clearAll(true).then(result => {
-      Log.i(TAG, `clearCookie - ${result}`);
-    });
+  const clearCookies = useCallback((): void => {
+    setCookieClearFailed(false);
+    setCookiesCleared(false);
+    void CookieManager.clearAll(true)
+      .then(cleared => {
+        if (cleared) {
+          setCookiesCleared(true);
+        } else {
+          setCookieClearFailed(true);
+        }
+      })
+      .catch(() => setCookieClearFailed(true));
   }, []);
 
-  const userInfoRef = useRef<UserInfo>({});
+  const showLoginFailure = useCallback((): void => {
+    isLoginPendingRef.current = false;
+    Alert.alert(t('app.login_failure_title'), t('app.login_failure_message'), [
+      {text: t('app.retry'), onPress: clearCookies},
+      {style: 'cancel', text: t('app.cancel')},
+    ]);
+  }, [clearCookies, t]);
+
+  useEffect(() => {
+    clearCookies();
+  }, [clearCookies]);
+
+  if (!cookiesCleared) {
+    return (
+      <View
+        style={[
+          StyleSheet.flatten([webViewStyle, style]),
+          styles.statusContainer,
+        ]}>
+        {cookieClearFailed ? (
+          <>
+            <Text style={styles.statusText}>
+              {t('app.cookie_clear_failed')}
+            </Text>
+            <Button
+              onPress={clearCookies}
+              testID="cookie-clear-retry"
+              title={t('app.retry')}
+            />
+          </>
+        ) : (
+          <Text style={styles.statusText}>{t('app.loading')}</Text>
+        )}
+      </View>
+    );
+  }
+
   return (
     <WebView
-      source={{
-        uri: CAS_MOBILE_LOGIN_URL,
-      }}
       injectedJavaScript={buildInjectedScript(
         t('cas.student_id_placeholder'),
         t('cas.invalid_student_id'),
@@ -216,63 +276,88 @@ function CasMobileLoginView(): React.JSX.Element {
         t('cas.account_expired_tip'),
         t('cas.invalid_username_or_password_tip'),
       )}
-      style={useWebViewStyle()}
-      webviewDebuggingEnabled={false}
-      onMessage={message => {
-        const event: {
-          type: string;
-          data: {username: string; password: string};
-        } = JSON.parse(message.nativeEvent.data);
-        if (event.type === 'postMessage') {
-          const {username, password} = event.data;
-          userInfoRef.current = {
-            studentId: username,
-            password,
-          };
-        }
-      }}
       onShouldStartLoadWithRequest={request => {
         const mobileToken = extractMobileToken(request.url);
-        if (mobileToken && !isLoginRef.current) {
-          isLoginRef.current = true;
+        if (
+          mobileToken &&
+          !isLoginCompleteRef.current &&
+          !isLoginPendingRef.current
+        ) {
+          isLoginPendingRef.current = true;
 
           const cookieHandler = (cookies: Cookies) => {
             const cookie = buildCookieHeader(cookies);
-            CasMobileLoginModule.onRequestSuccess(
-              userInfoRef.current.studentId ?? '',
-              userInfoRef.current.password ?? '',
-              cookie,
-            );
-            Log.i(TAG, `login cas mobile_token - ${mobileToken}`);
-            Log.i(TAG, `login cas cookie - ${JSON.stringify(cookie)}`);
+            if (!cookie) {
+              showLoginFailure();
+              return;
+            }
+            void CasMobileLoginModule.onLoginSuccess(cookie)
+              .then(stored => {
+                isLoginPendingRef.current = false;
+                if (stored) {
+                  isLoginCompleteRef.current = true;
+                  onLoginSuccess?.();
+                } else {
+                  showLoginFailure();
+                }
+              })
+              .catch(showLoginFailure);
           };
 
           if (Platform.OS === 'ios') {
-            CookieManager.getAll(true).then(allCookie => {
-              const cookie: Cookies = {};
-              Object.keys(allCookie)
-                .filter(key => allCookie[key].domain === 'cas.whu.edu.cn')
-                .forEach(key => {
-                  cookie[key] = allCookie[key];
-                });
-              cookieHandler(cookie);
-            });
+            void CookieManager.getAll(true)
+              .then(allCookie => {
+                const cookie: Cookies = {};
+                Object.keys(allCookie)
+                  .filter(key => {
+                    const domain = allCookie[key].domain
+                      .replace(/^\./, '')
+                      .toLowerCase();
+                    return (
+                      domain === 'cas.whu.edu.cn' ||
+                      domain.endsWith('.cas.whu.edu.cn')
+                    );
+                  })
+                  .forEach(key => {
+                    cookie[key] = allCookie[key];
+                  });
+                cookieHandler(cookie);
+              })
+              .catch(showLoginFailure);
           } else if (Platform.OS === 'android') {
-            CookieManager.get(CAS_AUTH_SERVER).then(cookies => {
-              cookieHandler(cookies);
-            });
+            void CookieManager.get(CAS_AUTH_SERVER)
+              .then(cookies => cookieHandler(cookies))
+              .catch(showLoginFailure);
           }
           return false;
         }
 
         if (request.url === PRIVACY_POLICY_URL) {
-          Linking.openURL(request.url).then(() => {});
+          void Linking.openURL(request.url);
           return false;
         }
         return true;
       }}
+      source={{
+        uri: CAS_MOBILE_LOGIN_URL,
+      }}
+      style={StyleSheet.flatten([webViewStyle, style])}
+      webviewDebuggingEnabled={false}
     />
   );
 }
+
+const styles = StyleSheet.create({
+  statusContainer: {
+    alignItems: 'center',
+    gap: 14,
+    justifyContent: 'center',
+    padding: 24,
+  },
+  statusText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+});
 
 export default CasMobileLoginView;

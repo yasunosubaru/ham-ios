@@ -8,13 +8,23 @@
 RCT_EXPORT_MODULE(NativeLog)
 
 - (void)i:(NSString *)tag
-  message:(NSString *)message {
+  message:(NSString *)message
+{
+  (void)tag;
+  (void)message;
+#if DEBUG
   NSLog(@"[ReactNative][%@] %@", tag, message);
+#endif
 }
 
 - (void)e:(NSString *)tag
-  message:(NSString *)message {
+  message:(NSString *)message
+{
+  (void)tag;
+  (void)message;
+#if DEBUG
   NSLog(@"[ReactNative][ERROR][%@] %@", tag, message);
+#endif
 }
 
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:(const facebook::react::ObjCTurboModule::InitParams &)params {

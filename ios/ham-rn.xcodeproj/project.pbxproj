@@ -9,15 +9,15 @@
 /* Begin PBXBuildFile section */
 		00E356F31AD99517003FC87E /* ham-rnTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F21AD99517003FC87E /* ham-rnTests.m */; };
 		0C80B921A6F3F58F76C31292 /* libPods-ham-rn.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-ham-rn.a */; };
+		EA7C0A012FAE000000000008 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EA7C0A012FAE000000000009 /* Security.framework */; };
+		EA7C0A012FAE00000000000A /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EA7C0A012FAE00000000000B /* WebKit.framework */; };
 		13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.mm */; };
+		EA7C0A012FAE000200000001 /* SceneDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = EA7C0A012FAE000200000003 /* SceneDelegate.mm */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		7699B88040F8A987B510C191 /* libPods-ham-rn-ham-rnTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 19F6CBCC0A4E27FBF8BF4A61 /* libPods-ham-rn-ham-rnTests.a */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		9F55C68FAB9F626B7369B1D9 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 865DD36AB2F25F109E8FE74F /* PrivacyInfo.xcprivacy */; };
-		EA6C0AF02F9F150000FF3511 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA6C0AF12F9F150000FF3511 /* HomeView.swift */; };
-		EA6C0AF22F9F150100FF3511 /* RNContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA6C0AF32F9F150100FF3511 /* RNContainerView.swift */; };
-		EA6C0AF42F9F150200FF3511 /* HomeViewFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA6C0AF52F9F150200FF3511 /* HomeViewFactory.swift */; };
 		EA7C0A012FAE000100000001 /* RNNativeCasMobileLoginModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = EA7C0A012FAE000000000001 /* RNNativeCasMobileLoginModule.mm */; };
 		EA7C0A012FAE000100000002 /* RNNativeCasModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = EA7C0A012FAE000000000002 /* RNNativeCasModule.mm */; };
 		EA7C0A012FAE000100000003 /* RNNativeCommonModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = EA7C0A012FAE000000000003 /* RNNativeCommonModule.mm */; };
@@ -40,13 +40,14 @@
 		00E356EE1AD99517003FC87E /* ham-rnTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ham-rnTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		00E356F11AD99517003FC87E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		00E356F21AD99517003FC87E /* ham-rnTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "ham-rnTests.m"; sourceTree = "<group>"; };
-		13B07F961A680F5B00A75B9A /* ham-rn.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ham-rn.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07F961A680F5B00A75B9A /* Ham.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ham.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FAF1A68108700A75B9A /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AppDelegate.h; path = "ham-rn/AppDelegate.h"; sourceTree = "<group>"; };
 		13B07FB01A68108700A75B9A /* AppDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AppDelegate.mm; path = "ham-rn/AppDelegate.mm"; sourceTree = "<group>"; };
+		EA7C0A012FAE000200000002 /* SceneDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SceneDelegate.h; path = "ham-rn/SceneDelegate.h"; sourceTree = "<group>"; };
+		EA7C0A012FAE000200000003 /* SceneDelegate.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = SceneDelegate.mm; path = "ham-rn/SceneDelegate.mm"; sourceTree = "<group>"; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = "ham-rn/Images.xcassets"; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = "ham-rn/Info.plist"; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = "ham-rn/main.m"; sourceTree = "<group>"; };
-		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = "ham-rn/PrivacyInfo.xcprivacy"; sourceTree = "<group>"; };
 		19F6CBCC0A4E27FBF8BF4A61 /* libPods-ham-rn-ham-rnTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-ham-rn-ham-rnTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B4392A12AC88292D35C810B /* Pods-ham-rn.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ham-rn.debug.xcconfig"; path = "Target Support Files/Pods-ham-rn/Pods-ham-rn.debug.xcconfig"; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-ham-rn.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ham-rn.release.xcconfig"; path = "Target Support Files/Pods-ham-rn/Pods-ham-rn.release.xcconfig"; sourceTree = "<group>"; };
@@ -56,16 +57,16 @@
 		865DD36AB2F25F109E8FE74F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = "ham-rn/PrivacyInfo.xcprivacy"; sourceTree = "<group>"; };
 		89C6BE57DB24E9ADA2F236DE /* Pods-ham-rn-ham-rnTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ham-rn-ham-rnTests.release.xcconfig"; path = "Target Support Files/Pods-ham-rn-ham-rnTests/Pods-ham-rn-ham-rnTests.release.xcconfig"; sourceTree = "<group>"; };
 		EA6C0AED2F9F14C300FF3511 /* ham-rn-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ham-rn-Bridging-Header.h"; sourceTree = "<group>"; };
-		EA6C0AF12F9F150000FF3511 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeView.swift; path = "ham-rn/HomeView.swift"; sourceTree = "<group>"; };
-		EA6C0AF32F9F150100FF3511 /* RNContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RNContainerView.swift; path = "ham-rn/RNContainerView.swift"; sourceTree = "<group>"; };
-		EA6C0AF52F9F150200FF3511 /* HomeViewFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeViewFactory.swift; path = "ham-rn/HomeViewFactory.swift"; sourceTree = "<group>"; };
 		EA7C0A012FAE000000000001 /* RNNativeCasMobileLoginModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = RNNativeCasMobileLoginModule.mm; path = "ham-rn/RNNativeCasMobileLoginModule.mm"; sourceTree = "<group>"; };
 		EA7C0A012FAE000000000002 /* RNNativeCasModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = RNNativeCasModule.mm; path = "ham-rn/RNNativeCasModule.mm"; sourceTree = "<group>"; };
 		EA7C0A012FAE000000000003 /* RNNativeCommonModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = RNNativeCommonModule.mm; path = "ham-rn/RNNativeCommonModule.mm"; sourceTree = "<group>"; };
 		EA7C0A012FAE000000000004 /* RNNativeEducationModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = RNNativeEducationModule.mm; path = "ham-rn/RNNativeEducationModule.mm"; sourceTree = "<group>"; };
 		EA7C0A012FAE000000000005 /* RNNativeLog.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = RNNativeLog.mm; path = "ham-rn/RNNativeLog.mm"; sourceTree = "<group>"; };
 		EA7C0A012FAE000000000006 /* RNNativeScoreCalcModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = RNNativeScoreCalcModule.mm; path = "ham-rn/RNNativeScoreCalcModule.mm"; sourceTree = "<group>"; };
+		EA7C0A012FAE000000000007 /* RNCasSession.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = RNCasSession.h; path = "ham-rn/RNCasSession.h"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		EA7C0A012FAE000000000009 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		EA7C0A012FAE00000000000B /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -82,6 +83,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				0C80B921A6F3F58F76C31292 /* libPods-ham-rn.a in Frameworks */,
+				EA7C0A012FAE000000000008 /* Security.framework in Frameworks */,
+				EA7C0A012FAE00000000000A /* WebKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -114,11 +117,9 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB71A68108700A75B9A /* main.m */,
-				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
 				865DD36AB2F25F109E8FE74F /* PrivacyInfo.xcprivacy */,
-				EA6C0AF12F9F150000FF3511 /* HomeView.swift */,
-				EA6C0AF32F9F150100FF3511 /* RNContainerView.swift */,
-				EA6C0AF52F9F150200FF3511 /* HomeViewFactory.swift */,
+				EA7C0A012FAE000200000002 /* SceneDelegate.h */,
+				EA7C0A012FAE000200000003 /* SceneDelegate.mm */,
 				EA6C0AED2F9F14C300FF3511 /* ham-rn-Bridging-Header.h */,
 				EA7C0A012FAE000000000001 /* RNNativeCasMobileLoginModule.mm */,
 				EA7C0A012FAE000000000002 /* RNNativeCasModule.mm */,
@@ -126,6 +127,7 @@
 				EA7C0A012FAE000000000004 /* RNNativeEducationModule.mm */,
 				EA7C0A012FAE000000000005 /* RNNativeLog.mm */,
 				EA7C0A012FAE000000000006 /* RNNativeScoreCalcModule.mm */,
+				EA7C0A012FAE000000000007 /* RNCasSession.h */,
 			);
 			name = "ham-rn";
 			sourceTree = "<group>";
@@ -134,6 +136,8 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
+				EA7C0A012FAE000000000009 /* Security.framework */,
+				EA7C0A012FAE00000000000B /* WebKit.framework */,
 				5DCACB8F33CDC322A6C60F78 /* libPods-ham-rn.a */,
 				19F6CBCC0A4E27FBF8BF4A61 /* libPods-ham-rn-ham-rnTests.a */,
 			);
@@ -165,7 +169,7 @@
 		83CBBA001A601CBA00E9B192 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				13B07F961A680F5B00A75B9A /* ham-rn.app */,
+				13B07F961A680F5B00A75B9A /* Ham.app */,
 				00E356EE1AD99517003FC87E /* ham-rnTests.xctest */,
 			);
 			name = Products;
@@ -223,8 +227,8 @@
 			dependencies = (
 			);
 			name = "ham-rn";
-			productName = "ham-rn";
-			productReference = 13B07F961A680F5B00A75B9A /* ham-rn.app */;
+			productName = Ham;
+			productReference = 13B07F961A680F5B00A75B9A /* Ham.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -427,11 +431,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				EA6C0AF02F9F150000FF3511 /* HomeView.swift in Sources */,
-				EA6C0AF22F9F150100FF3511 /* RNContainerView.swift in Sources */,
-				EA6C0AF42F9F150200FF3511 /* HomeViewFactory.swift in Sources */,
 				13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */,
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
+				EA7C0A012FAE000200000001 /* SceneDelegate.mm in Sources */,
 				EA7C0A012FAE000100000001 /* RNNativeCasMobileLoginModule.mm in Sources */,
 				EA7C0A012FAE000100000002 /* RNNativeCasModule.mm in Sources */,
 				EA7C0A012FAE000100000003 /* RNNativeCommonModule.mm in Sources */,
@@ -473,9 +475,9 @@
 					"-lc++",
 					"$(inherited)",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.nowcent.ham.rnTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ham-rn.app/ham-rn";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ham.app/Ham";
 			};
 			name = Debug;
 		};
@@ -497,9 +499,9 @@
 					"-lc++",
 					"$(inherited)",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.nowcent.ham.rnTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ham-rn.app/ham-rn";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ham.app/Ham";
 			};
 			name = Release;
 		};
@@ -519,15 +521,15 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = "ham-rn";
-				SWIFT_OBJC_BRIDGING_HEADER = "ham-rn-Bridging-Header.h";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.nowcent.ham.rn";
+				PRODUCT_NAME = Ham;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -549,15 +551,15 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = "ham-rn";
-				SWIFT_OBJC_BRIDGING_HEADER = "ham-rn-Bridging-Header.h";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.nowcent.ham.rn";
+				PRODUCT_NAME = Ham;
+				TARGETED_DEVICE_FAMILY = "1,2";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
 			};

@@ -63,9 +63,9 @@ describe('initial render', () => {
 });
 
 describe('onShouldStartLoadWithRequest', () => {
-  it('reports and blocks URLs carrying a ticket query parameter', async () => {
+  it('reports and blocks an allowed HTTPS ticket URL', async () => {
     const onGetTicketUrl = await renderView();
-    const url = 'https://x.example.com/cas?ticket=ST-123456';
+    const url = 'https://cas.whu.edu.cn/cas?ticket=ST-123456';
     expect(webviewProps().onShouldStartLoadWithRequest({url})).toBe(false);
     expect(onGetTicketUrl).toHaveBeenCalledWith(url);
   });
@@ -80,27 +80,27 @@ describe('onShouldStartLoadWithRequest', () => {
     expect(onGetTicketUrl).not.toHaveBeenCalled();
   });
 
-  it('matches ticket as a plain substring, including in the host', async () => {
+  it('rejects a ticket URL on an untrusted host', async () => {
     const onGetTicketUrl = await renderView();
-    const url = 'https://ticket.example.com/';
-    expect(webviewProps().onShouldStartLoadWithRequest({url})).toBe(false);
-    expect(onGetTicketUrl).toHaveBeenCalledWith(url);
+    const url = 'https://x.example.com/cas?ticket=ST-123456';
+    expect(webviewProps().onShouldStartLoadWithRequest({url})).toBe(true);
+    expect(onGetTicketUrl).not.toHaveBeenCalled();
   });
 
-  it('matches ticket anywhere in the path, not just as a parameter', async () => {
+  it('rejects a ticket-looking path without a ticket parameter', async () => {
     const onGetTicketUrl = await renderView();
-    const url = 'https://x.example.com/tickets/list';
-    expect(webviewProps().onShouldStartLoadWithRequest({url})).toBe(false);
-    expect(onGetTicketUrl).toHaveBeenCalledWith(url);
+    const url = 'https://cas.whu.edu.cn/tickets/list';
+    expect(webviewProps().onShouldStartLoadWithRequest({url})).toBe(true);
+    expect(onGetTicketUrl).not.toHaveBeenCalled();
   });
 
-  it('reports every ticket URL it sees, with no once-only guard', async () => {
+  it('reports every valid ticket URL it sees, with no once-only guard', async () => {
     const onGetTicketUrl = await renderView();
     webviewProps().onShouldStartLoadWithRequest({
-      url: 'https://x.example.com/cas?ticket=ST-1',
+      url: 'https://cas.whu.edu.cn/cas?ticket=ST-1',
     });
     webviewProps().onShouldStartLoadWithRequest({
-      url: 'https://x.example.com/cas?ticket=ST-2',
+      url: 'https://cas.whu.edu.cn/cas?ticket=ST-2',
     });
     expect(onGetTicketUrl).toHaveBeenCalledTimes(2);
   });

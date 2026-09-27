@@ -7,6 +7,8 @@ on:
   push:
     branches:
       - main
+      - standalone-app
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
@@ -14,19 +16,48 @@ concurrency:
 
 env:
   HUSKY: '0'
+  # macos-15 ships several Xcode versions and changes which one is selected by
+  # default whenever the image is updated, so an unpinned build stops
+  # reproducing without any change to this repository. 16.4 is what the image
+  # defaults to today and sits above the Xcode 16.1 floor that React Native 0.87
+  # requires. Bump this together with a deliberate toolchain change.
+  XCODE_VERSION: '16.4'
 
 jobs:
   ios-build:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          developer_dir="/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
+          if [ ! -d "$developer_dir" ]; then
+            echo "::error::Xcode ${XCODE_VERSION} is not on this runner image. Bump XCODE_VERSION in this workflow." >&2
+            ls -1 /Applications | grep -i xcode >&2 || true
+            exit 1
+          fi
+          sudo xcode-select -s "$developer_dir"
+      - name: Record Xcode version
+        id: xcode
+        run: |
+          set -euo pipefail
+          # Read the whole output before slicing it. Piping xcodebuild straight
+          # into `head` closes the pipe after the first line, and current Xcode
+          # releases then abort with an uncaught NSFileHandle broken-pipe
+          # exception, which `set -o pipefail` turns into a failed step.
+          xcode_version="$(xcodebuild -version)"
+          printf '%s\n' "$xcode_version"
+          version="${xcode_version%%$'\n'*}"
+          test -n "$version"
+          echo "version=${version// /-}" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 10.32.1
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Install CocoaPods
@@ -48,7 +79,7 @@ jobs:
           # a Pods tree built against a different react-native version, which is
           # exactly the failure this key is meant to avoid. A miss just rebuilds
           # Pods from scratch.
-          key: ${{ runner.os }}-pods-${{ hashFiles('ios/Podfile.lock', 'node_modules/react-native/sdks/hermes-engine/version.properties', 'node_modules/react-native/package.json') }}
+          key: ${{ runner.os }}-ios-${{ steps.xcode.outputs.version }}-pods-1.16.2-${{ hashFiles('ios/Podfile.lock', 'node_modules/react-native/sdks/hermes-engine/version.properties', 'node_modules/react-native/package.json') }}
       - name: Install CocoaPods dependencies
         working-directory: ios
         run: pod _1.16.2_ install --no-repo-update
@@ -66,3 +97,101 @@ jobs:
             build \
             ONLY_ACTIVE_ARCH=YES \
             CODE_SIGNING_ALLOWED=NO
+      - name: Build iOS Release (unsigned)
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -workspace ham-rn.xcworkspace \
+            -scheme ham-rn \
+            -sdk iphonesimulator \
+            -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            build \
+            ONLY_ACTIVE_ARCH=YES \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+      # The simulator build is the one thing here worth handing to a person, so
+      # it is uploaded rather than thrown away. Built on the runner rather than on
+      # anyone's Mac on purpose: the compilation directory is baked into the
+      # binary and into the Metro bundle's source URLs, and a build made in a
+      # personal home directory publishes that account name to everyone who
+      # downloads it. CODE_SIGNING_ALLOWED=NO above also keeps the Apple Team ID
+      # out, which no signed build can avoid.
+      - name: Package the simulator app
+        run: |
+          set -euo pipefail
+          # Ask the build system where it put the product instead of assuming.
+          # Without an explicit -derivedDataPath, xcodebuild writes to the
+          # per-user DerivedData directory, so `ios/build/Build/Products/...`
+          # does not exist. The first attempt assumed it did, and failed the job
+          # on a build that had in fact succeeded.
+          settings="$(xcodebuild \
+            -workspace ios/ham-rn.xcworkspace \
+            -scheme ham-rn \
+            -sdk iphonesimulator \
+            -configuration Release \
+            -showBuildSettings 2>/dev/null)"
+          products="$(printf '%s\n' "$settings" \
+            | awk -F' = ' '/^[[:space:]]*BUILT_PRODUCTS_DIR/ {print $2; exit}')"
+          product="$(printf '%s\n' "$settings" \
+            | awk -F' = ' '/^[[:space:]]*FULL_PRODUCT_NAME/ {print $2; exit}')"
+          test -n "$products" && test -n "$product" || {
+            echo '::error::could not read BUILT_PRODUCTS_DIR / FULL_PRODUCT_NAME'
+            exit 1
+          }
+          app="$products/$product"
+          test -d "$app" || { echo "::error::$app was not produced"; exit 1; }
+          echo "packaging $app"
+          # A stray .DS_Store inside the bundle is noise in a published artifact.
+          find "$app" -name '.DS_Store' -delete
+          # Prove the artifact carries no build-machine identity before it is
+          # uploaded, so a bad one fails here instead of in someone's download.
+          #
+          # This has to read the extracted bundle, not the zip: the entries are
+          # deflated, so grepping the archive finds nothing and passes no matter
+          # what is inside. `grep -a` forces text mode, because otherwise grep
+          # skips the Mach-O binaries where these paths actually live.
+          #
+          # Every /Users/<name> has to be `runner`. On a runner that is nearly a
+          # tautology, and that is the point: it guards against a later step
+          # handing in an artifact built elsewhere, which is precisely how a
+          # personal directory becomes published. The alternative -- trusting
+          # that nobody adds such a step -- is how it happened the first time.
+          echo 'build-machine paths referenced by the bundle:'
+          found="$(grep -rhoaE '/Users/[A-Za-z0-9._-]+' "$app" | sort -u || true)"
+          echo "${found:-  (none)}"
+          while read -r p; do
+            [ -n "$p" ] || continue
+            if [ "$p" != '/Users/runner' ]; then
+              echo "::error::bundle references a non-runner home directory: $p"
+              exit 1
+            fi
+          done <<< "$found"
+          (cd "$products" && zip -qry "$GITHUB_WORKSPACE/Ham-iOS-Simulator-1.0.0.zip" "$product")
+          ls -l "$GITHUB_WORKSPACE/Ham-iOS-Simulator-1.0.0.zip"
+      - name: Upload the simulator app
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ham-iOS-Simulator-1.0.0
+          path: Ham-iOS-Simulator-1.0.0.zip
+          if-no-files-found: error
+          retention-days: 30
+      # Everything above builds against iphonesimulator, but TestFlight packages
+      # the device SDK. A simulator-only build never compiles the arm64 slices
+      # and never exercises the device-only parts of the configuration, so add
+      # one unsigned device build. CODE_SIGNING_ALLOWED=NO keeps it a pure
+      # compile check: nothing is signed, archived for upload, or distributed.
+      - name: Build iOS Release for device (unsigned)
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -workspace ham-rn.xcworkspace \
+            -scheme ham-rn \
+            -sdk iphoneos \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""

@@ -23,8 +23,9 @@ import com.nowcent.ham.rndebug.module.RNCustomPackage
 private fun getHost(context: Context): ReactHost {
     return DefaultReactHost.getDefaultReactHost(
         context = context,
-        packageList =  PackageList(context.applicationContext as Application).packages + RNCustomPackage(),
-        useDevSupport = BuildConfig.DEBUG
+        packageList = PackageList(context.applicationContext as Application).packages + RNCustomPackage(),
+        jsMainModulePath = if (BuildConfig.DEBUG) "index.debug" else "index",
+        useDevSupport = BuildConfig.DEBUG,
     )
 }
 

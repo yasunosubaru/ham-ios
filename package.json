@@ -1,7 +1,8 @@
 {
   "name": "ham-rn",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "private": true,
+  "packageManager": "pnpm@10.32.1",
   "scripts": {
     "embed": "tsx scripts/embed.ts",
     "android": "pnpm embed && react-native run-android",
@@ -10,13 +11,17 @@
     "start": "pnpm embed && react-native start",
     "test": "pnpm embed && jest",
     "typecheck": "pnpm embed && tsc --noEmit",
-    "bundle:android": "pnpm embed && mkdir -p build/android && react-native bundle --platform android --dev false --entry-file index.js --bundle-output build/android/index.android.bundle --assets-dest build/android/res",
-    "bundle:ios": "pnpm embed && mkdir -p build/ios && react-native bundle --platform ios --dev false --entry-file index.js --bundle-output build/ios/main.jsbundle --assets-dest build/ios",
+    "bundle:android": "pnpm embed && node -e \"require('fs').mkdirSync('build/android',{recursive:true})\" && react-native bundle --platform android --dev false --entry-file index.js --bundle-output build/android/index.android.bundle --assets-dest build/android/res",
+    "bundle:android:debug": "pnpm embed && node -e \"require('fs').mkdirSync('build/android-debug',{recursive:true})\" && react-native bundle --platform android --dev true --entry-file index.debug.js --bundle-output build/android-debug/index.android.bundle --assets-dest build/android-debug/res",
+    "bundle:ios": "pnpm embed && node -e \"require('fs').mkdirSync('build/ios',{recursive:true})\" && react-native bundle --platform ios --dev false --entry-file index.js --bundle-output build/ios/main.jsbundle --assets-dest build/ios",
+    "bundle:ios:debug": "pnpm embed && node -e \"require('fs').mkdirSync('build/ios-debug',{recursive:true})\" && react-native bundle --platform ios --dev true --entry-file index.debug.js --bundle-output build/ios-debug/main.jsbundle --assets-dest build/ios-debug",
     "deploy": "pnpm hot-updater deploy -i",
     "prepare": "husky"
   },
   "dependencies": {
     "@hot-updater/react-native": "0.36.15",
+    "@noble/ciphers": "2.4.0",
+    "@noble/hashes": "2.4.0",
     "@preeternal/react-native-cookie-manager": "^6.4.1",
     "@react-native-community/cli-platform-android": "^20.2.0",
     "@react-native-community/cli-platform-ios": "^20.2.0",

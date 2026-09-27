@@ -8,21 +8,20 @@
 RCT_EXPORT_MODULE(NativeScoreCalcModule)
 
 - (NSString *)getCurrentCalc {
-  NSLog(@"[RNNativeScoreCalcModule] getCurrentCalc");
   return @"";
 }
 
 - (NSNumber *)selectCalc:(JS::NativeScoreCalcModule::ScoreCalcItem &)item {
-  NSLog(@"[RNNativeScoreCalcModule] selectCalc: title=%@", item.title());
+  (void)item;
   return @YES;
 }
 
 - (void)openDetail:(JS::NativeScoreCalcModule::ScoreCalcItem &)item {
-  NSLog(@"[RNNativeScoreCalcModule] openDetail: title=%@", item.title());
+  (void)item;
 }
 
 - (NSNumber *)testItem:(JS::NativeScoreCalcModule::ScoreCalcItem &)item {
-  NSLog(@"[RNNativeScoreCalcModule] testItem: title=%@", item.title());
+  (void)item;
   return @YES;
 }
 

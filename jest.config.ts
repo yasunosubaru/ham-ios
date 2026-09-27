@@ -5,6 +5,10 @@ import type {Config} from '@jest/types';
  * be transformed. Nested copies (`color` -> `color-string` -> `color-convert`)
  * need their own allowlist, since the nested path is not covered by the
  * top-level `node_modules/(...)` pattern.
+ *
+ * The two `@noble` packages are scoped, so they also have to appear in the
+ * transform pattern below as `@noble/ciphers` rather than as a bare name -- a
+ * scoped name is not matched by a `node_modules/(name)` prefix.
  */
 const ESM_DEPS = [
   'color',
@@ -17,6 +21,8 @@ const ESM_DEPS = [
   'i18next',
   'react-i18next',
   'react-native-webview',
+  '@noble/ciphers',
+  '@noble/hashes',
 ].join('|');
 
 const config: Config.InitialOptions = {

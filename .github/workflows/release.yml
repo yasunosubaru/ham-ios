@@ -23,7 +23,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 10.32.1
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -32,15 +32,19 @@ jobs:
           pnpm bundle:android
           pnpm bundle:ios
 
+      # Named `*-jsbundle-1.0.0.zip` rather than `*-bundle.zip`, because a
+      # release that also carries a runnable Ham.app otherwise has two very
+      # different things both called "bundle" and a reader cannot tell which one
+      # installs. The JS bundle is a source drop, not an app.
       - name: Zip bundles
         run: |
-          cd build/android && zip -r ../../android-bundle.zip . && cd ../..
-          cd build/ios && zip -r ../../ios-bundle.zip . && cd ../..
+          cd build/android && zip -r ../../ham-android-jsbundle-1.0.0.zip . && cd ../..
+          cd build/ios && zip -r ../../ham-ios-jsbundle-1.0.0.zip . && cd ../..
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: |
-            android-bundle.zip
-            ios-bundle.zip
+            ham-android-jsbundle-1.0.0.zip
+            ham-ios-jsbundle-1.0.0.zip

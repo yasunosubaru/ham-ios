@@ -1,4 +1,3 @@
-import {logChunked} from '@/utils/request/request';
 import Cas from '../cas';
 import Log from '@/modules/NativeLog';
 
@@ -23,17 +22,11 @@ const loginEducation = async () => {
   const res = await Cas.Api.fastLogin({
     service: 'https%3A%2F%2Fjwgl.whu.edu.cn%2Fsso%2Fjznewsixlogin',
   });
-  const url = res.url;
   const text = await res.text();
-  // The CAS login page is HTML and runs past the 16KB buffer xlog formats
-  // into, which would drop the entry whole. The url is short, so it goes in
-  // the prefix and repeats on each chunk; the body is what gets split.
-  logChunked('i', `url=${url} response`, text, 'loginEducation');
-
   if (res.url.indexOf('ReAuth') !== -1) {
     throw new CasReAuthLoginError(res.url);
   } else if (text.indexOf('教学管理信息服务平台') === -1) {
-    Log.e('EducationApi', `login education error! res.url=${res.url}`);
+    Log.e('EducationApi', 'Education system login failed');
     const errReason = parseJsError(text);
     const realReason = errReason.length
       ? errReason

@@ -1,9 +1,34 @@
 #!/bin/sh
-
 # Read pushed refs from stdin (provided by git)
+#
+# The identity check is repeated here, not just at commit time. A commit can be
+# created by something that bypasses hooks -- `git commit-tree`, an IDE, a
+# `git -c user.email=...` invocation scoped to a single command -- and this is
+# the last point before the object leaves the machine. Cheap, and it is the
+# boundary that actually matters.
+ident="$(git var GIT_COMMITTER_IDENT 2>/dev/null | sed -n 's/.*<\([^>]*\)>.*/\1/p')"
+case "$ident" in
+  *@users.noreply.github.com) ;;
+  *)
+    echo "refusing to push: committer email is <$ident>, not a users.noreply.github.com address" >&2
+    echo "  fix with: git config user.email yasunosubaru@users.noreply.github.com" >&2
+    exit 1
+    ;;
+esac
+
 while read local_ref local_sha remote_ref remote_sha; do
   if [ "$remote_ref" = "refs/heads/main" ]; then
     echo "🚫 Direct push to main is not allowed. Please use a pull request."
     exit 1
   fi
 done
+
+# Everything else, on every push. A commit reached the public repository twice in
+# one session with an author email that a history rewrite had just removed, and
+# the second time everything else was green. "Did I verify?" living only in
+# whoever is pushing is not a control; running the check here is.
+if [ "${HAM_SKIP_GATE:-}" = "1" ]; then
+  echo "HAM_SKIP_GATE=1 -- verification skipped. This is a decision, not an oversight." >&2
+  exit 0
+fi
+exec node scripts/verify-prepush.mjs

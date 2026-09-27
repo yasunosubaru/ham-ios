@@ -42,3 +42,11 @@ tags:
     id: weather
 - assertVisible:
     id: back-button
+
+# Library is behind the university session like the other two, so on a cleared
+# state it opens the sign-in view rather than the booking screen. Either way the
+# header is what gets asserted, for the same reason as weather.
+- tapOn:
+    id: library
+- assertVisible:
+    id: back-button

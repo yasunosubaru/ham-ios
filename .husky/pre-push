@@ -1,6 +1,21 @@
 #!/bin/sh
-
 # Read pushed refs from stdin (provided by git)
+#
+# The identity check is repeated here, not just at commit time. A commit can be
+# created by something that bypasses hooks -- `git commit-tree`, an IDE, a
+# `git -c user.email=...` invocation scoped to a single command -- and this is
+# the last point before the object leaves the machine. Cheap, and it is the
+# boundary that actually matters.
+ident="$(git var GIT_COMMITTER_IDENT 2>/dev/null | sed -n 's/.*<\([^>]*\)>.*/\1/p')"
+case "$ident" in
+  *@users.noreply.github.com) ;;
+  *)
+    echo "refusing to push: committer email is <$ident>, not a users.noreply.github.com address" >&2
+    echo "  fix with: git config user.email yasunosubaru@users.noreply.github.com" >&2
+    exit 1
+    ;;
+esac
+
 while read local_ref local_sha remote_ref remote_sha; do
   if [ "$remote_ref" = "refs/heads/main" ]; then
     echo "🚫 Direct push to main is not allowed. Please use a pull request."

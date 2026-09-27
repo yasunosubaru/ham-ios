@@ -255,6 +255,12 @@ const Rule = ({label, value}: {label: string; value: string}) => {
  * presentation shortcut, not a parser: nothing here evaluates markup, and no
  * attribute is carried through, so a notice cannot smuggle anything into the
  * tree.
+ *
+ * The service's notices are built from empty paragraphs as spacers -- the live
+ * one is a run of `<p>?</p>` between every line -- so collapsing runs of three
+ * or more newlines is not cosmetic. Without it the notice renders as a column of
+ * blank lines with one line of text peeking between each pair, which is what the
+ * first device run showed.
  */
 const stripMarkup = (html: string): string =>
   html
@@ -265,7 +271,10 @@ const stripMarkup = (html: string): string =>
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
-    .replace(/\n{3,}/g, '\n\n')
+    .split('\n')
+    .map(line => line.trim())
+    .join('\n')
+    .replace(/\n{2,}/g, '\n')
     .trim();
 
 const styles = StyleSheet.create({

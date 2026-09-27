@@ -43,6 +43,13 @@ tags:
 - assertVisible:
     id: back-button
 
+# Back to the list before the next card. Every other entry here taps back
+# between cards; skipping this one left the flow on the weather screen, where
+# there is no `library` element to find -- which is what it reported, as a
+# missing element rather than as "still on the previous screen".
+- tapOn:
+    id: back-button
+
 # Library is behind the university session like the other two, so on a cleared
 # state it opens the sign-in view rather than the booking screen. Either way the
 # header is what gets asserted, for the same reason as weather.

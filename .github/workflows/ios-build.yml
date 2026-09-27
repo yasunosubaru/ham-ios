@@ -7,6 +7,8 @@ on:
   push:
     branches:
       - main
+      - standalone-app
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
@@ -109,6 +111,52 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY=""
+      # The simulator build is the one thing here worth handing to a person, so
+      # it is uploaded rather than thrown away. Built on the runner rather than on
+      # anyone's Mac on purpose: the compilation directory is baked into the
+      # binary and into the Metro bundle's source URLs, and a build made in a
+      # personal home directory publishes that account name to everyone who
+      # downloads it. CODE_SIGNING_ALLOWED=NO above also keeps the Apple Team ID
+      # out, which no signed build can avoid.
+      - name: Package the simulator app
+        run: |
+          set -euo pipefail
+          app='ios/build/Build/Products/Release-iphonesimulator/Ham.app'
+          test -d "$app" || { echo "::error::$app was not produced"; exit 1; }
+          # A stray .DS_Store inside the bundle is noise in a published artifact.
+          find "$app" -name '.DS_Store' -delete
+          # Prove the artifact carries no build-machine identity before it is
+          # uploaded, so a bad one fails here instead of in someone's download.
+          #
+          # This has to read the extracted bundle, not the zip: the entries are
+          # deflated, so grepping the archive finds nothing and passes no matter
+          # what is inside. `grep -a` forces text mode, because otherwise grep
+          # skips the Mach-O binaries where these paths actually live.
+          #
+          # Every /Users/<name> in the build has to be `runner`. That is not a
+          # tautology on a runner -- it is a guard against a later step handing
+          # in an artifact built somewhere else, which is exactly how a personal
+          # directory would end up published.
+          echo 'build-machine paths referenced by the bundle:'
+          found="$(grep -rhoaE '/Users/[A-Za-z0-9._-]+' "$app" | sort -u || true)"
+          echo "${found:-  (none)}"
+          while read -r p; do
+            [ -n "$p" ] || continue
+            if [ "$p" != '/Users/runner' ]; then
+              echo "::error::bundle references a non-runner home directory: $p"
+              exit 1
+            fi
+          done <<< "$found"
+          (cd ios/build/Build/Products/Release-iphonesimulator \
+            && zip -qry "$GITHUB_WORKSPACE/Ham-iOS-Simulator-1.0.0.zip" Ham.app)
+          ls -l "$GITHUB_WORKSPACE/Ham-iOS-Simulator-1.0.0.zip"
+      - name: Upload the simulator app
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ham-iOS-Simulator-1.0.0
+          path: Ham-iOS-Simulator-1.0.0.zip
+          if-no-files-found: error
+          retention-days: 30
       # Everything above builds against iphonesimulator, but TestFlight packages
       # the device SDK. A simulator-only build never compiles the arm64 slices
       # and never exercises the device-only parts of the configuration, so add

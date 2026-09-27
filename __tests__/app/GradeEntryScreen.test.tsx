@@ -205,7 +205,11 @@ describe('what the grade entry screen does with a reply', () => {
     await waitFor(() =>
       expect(screen.getByText('共 1 名学生')).toBeOnTheScreen(),
     );
-    expect(screen.getByText('总评成绩')).toBeOnTheScreen();
+    // `bfzcj` is the field the page itself decides a row by, and it is the one
+    // field with no label anywhere in the page -- so it is shown under its own
+    // name rather than under a plausible invention.
+    expect(screen.getByText('bfzcj')).toBeOnTheScreen();
+    expect(screen.queryByText('总评成绩')).toBeNull();
   });
 
   it('says how many fields it did not recognise, instead of dropping them', async () => {

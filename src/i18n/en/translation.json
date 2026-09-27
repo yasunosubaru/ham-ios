@@ -69,7 +69,7 @@
     "grades": {
       "back_to_page": "Back to the education page",
       "course_rows": "{{count}} courses",
-      "description": "The teacher view is the same page as the student score query, branched by the server on your account's role. Fields this app knows are shown by name; anything else is called out rather than hidden.",
+      "description": "The teacher view is the same page as the student score query (/cjcx/cjcx_cxDgXscj.html?doType=query), branched by the server on your account's role. Fields the page names are shown with its own labels; fields it leaves unnamed are shown in italics under their raw field name; anything outside the vocabulary is counted rather than hidden.",
       "empty": "Nothing returned yet. Use the page above to run a query.",
       "endpoint": "Endpoint {{url}}",
       "extra_fields": "{{count}} field(s) not in the vocabulary",

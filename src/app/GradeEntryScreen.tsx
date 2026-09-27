@@ -8,9 +8,12 @@ import EducationPageView, {
 } from '@/components/education/EducationPageView';
 import {
   COURSE_COLUMNS,
+  GRADE_QUERY_PATH,
+  hasPageLabel,
   partitionRecord,
   ROSTER_COLUMNS,
   rowsOf,
+  STUDENT_GRADE_QUERY_PATH,
 } from '@/business/education/grades/columns';
 import CasModule from '@/modules/NativeCasModule';
 import {describeError} from '@/utils/error';
@@ -18,7 +21,7 @@ import {useColor} from '@/utils/color/color';
 import PrimaryButton from '@/utils/ui/PrimaryButton';
 
 /**
- * Grade entry: the courses awaiting marks, and the roster inside one.
+ * Grade entry: the courses awaiting marks, and what the page says about them.
  *
  * The teacher view is the *same page* as the student score query -- same path,
  * same `gnmkdm` (`N305005`) -- branched by a hidden `jsxx` field the server sets
@@ -26,25 +29,41 @@ import PrimaryButton from '@/utils/ui/PrimaryButton';
  * So which view appears follows from the account that signed in, and this screen
  * only has to point at the page and read the reply.
  *
+ * The query endpoint is no longer a guess. The grid's own source says:
+ *
+ *     url: _path + ($("#jsxx").val() == "xs" ? '/cjcx/cjcx_cxXsgrcj.html'
+ *                                               : '/cjcx/cjcx_cxDgXscj.html')
+ *            + '?doType=query'
+ *
+ * so a teacher's grade query is `POST /cjcx/cjcx_cxDgXscj.html?doType=query` --
+ * this page, querying itself, with `paramMap()`'s 44 fields as the body. That is
+ * the first time the endpoint has been known rather than inferred, and it is why
+ * {@link GRADE_TARGETS} leads with it.
+ *
+ * What a teacher should expect to get back is a **course list**, not a roster:
+ * the grid is `multiselect: $("#jsxx").val() != "xs"` for exactly this role, so a
+ * teacher ticks courses and then acts on them, and a single student's marks are
+ * reached from a dialog that takes `xh_id` and `kch_id` off the chosen row. The
+ * screen still decides what it got from the reply rather than from this, since
+ * nothing has been observed yet.
+ *
  * Two things about it are known and one is not:
  *
  *   - The captcha is not in the way. All three of the page's checks read
  *     `... && jsxx == "xs"`, so it applies to the student view only. A teacher
  *     account never meets it. That is the university's own arrangement.
- *   - The grid's field vocabulary is known: 108 columns in the page's own
- *     `getGridColModel()`, of which `columns.ts` carries the ones a WHU account
- *     receives. Which of them a given reply contains is not a question with one
- *     answer up front -- it is what the account is entitled to see.
- *   - Which endpoint answers, and whether it answers with a course list or a
- *     roster, could not be established without a session: every `.html` on the
- *     host redirects to the login page whether or not it exists.
+ *   - The field vocabulary is known, from the page's own 108 column definitions
+ *     resolved for Wuhan's school code. See `grades/columns.ts`.
+ *   - The reply's envelope is not known. The grid is built on a shared
+ *     `BaseJqGrid` wrapper that is not reachable, and `rows`, `records`, `total`
+ *     and `setGridData` appear nowhere in the page's own source.
  *
  * So the screen reads whatever arrives, names the fields it recognises, and
  * **shows the rest rather than hiding it**. A field this list has never heard of
  * is a fact about the reply, and dropping it would make the app look finished
  * when it is not. Every reply is also shown with the endpoint that produced it,
- * because with no session to compare against, that is the only way to tell a
- * course list from a roster.
+ * because the envelope is a guess and a guess is only checkable if the thing it
+ * guessed about stays visible.
  *
  * This screen writes nothing. It reads what the page returns and stops there.
  */
@@ -52,19 +71,21 @@ import PrimaryButton from '@/utils/ui/PrimaryButton';
 /**
  * Endpoints whose replies are read.
  *
- * A list rather than a single path, because the teacher's data endpoint is not
- * known: the host answers `302` for real and invented paths alike, so there is
- * no way to narrow this down without a session. The score grid is included
- * because the teacher view renders one too.
+ * The first is the one the page's source names outright, for a teacher's grade
+ * query; the second is its student-side counterpart, in case an account sees
+ * both. The rest are the grid's neighbours -- a mark breakdown, a component
+ * ratio list, a count -- and are watched because which of them a given query
+ * reaches is not something the source states. They cost nothing to read and
+ * would be invisible if missed.
  */
 const GRADE_TARGETS = [
-  'cjcx_cxXsgrcj',
+  GRADE_QUERY_PATH.slice(GRADE_QUERY_PATH.lastIndexOf('/') + 1),
+  STUDENT_GRADE_QUERY_PATH.slice(STUDENT_GRADE_QUERY_PATH.lastIndexOf('/') + 1),
   'cxBcxscjmxdx',
   'mxdx_cxMxdx',
   'cjcx_plgxBkxscj',
   'cjcx_sjtbXscj',
   'cjcx_cxXxCount',
-  'cjcx_cxDgXscj',
 ];
 
 /** One captured reply, kept whole so the endpoint stays visible. */
@@ -216,6 +237,10 @@ const Reply = ({captured}: {captured: Captured}): React.JSX.Element => {
     );
   }
 
+  // Which of the two this is, decided from the reply rather than from the
+  // endpoint. A teacher should get a course list -- the grid is multiselect for
+  // that role so courses can be ticked before acting on them -- but nothing has
+  // been observed yet, so the reply decides and the endpoint stays on screen.
   const isRoster = rows.some(row => row['xh'] !== undefined);
   const order = isRoster ? ROSTER_COLUMNS : COURSE_COLUMNS;
   const shown = expanded ? rows : rows.slice(0, 8);
@@ -252,6 +277,12 @@ const Reply = ({captured}: {captured: Captured}): React.JSX.Element => {
                     style={[
                       styles.fieldLabel,
                       {color: color.ham_text_secondary},
+                      // A field the page never names is shown under its own
+                      // name, in italics, so a raw identifier is not read as a
+                      // word the university uses. `bfzcj` is the one that
+                      // matters: it is what the page itself compares a mark
+                      // against 60 and against 100.
+                      !hasPageLabel(field.name) ? styles.unnamed : null,
                     ]}>
                     {field.label}
                   </Text>
@@ -424,6 +455,11 @@ const styles = StyleSheet.create({
   },
   screen: {
     flex: 1,
+  },
+  // A field the page leaves unnamed. Italic so it reads as a placeholder for a
+  // missing label rather than as a label in its own right.
+  unnamed: {
+    fontStyle: 'italic',
   },
 });
 

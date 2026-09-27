@@ -101,41 +101,31 @@ fi
 echo "  simulator: $UDID ($state -> booted)"
 
 # --- dependencies ----------------------------------------------------------
-# node_modules and Pods are the slow parts and do not change between pushes, so
-# reuse the long-lived checkout's copies through symlinks rather than refetching
-# them. The archive carries neither, since both are generated and gitignored.
+# node_modules is installed, never symlinked.
 #
-# Reusing Pods means the pod xcconfig files still point at that checkout's
-# paths, so this build is a *does it compile, install and run* check and not a
-# clean one. That division is deliberate: the publishable artifact is built by
-# CI, which does its own `pod install` on a runner and therefore carries no local
-# path at all. A gate that did a fresh pod install on every push would cost
-# minutes each time and would still not be checking the thing that matters,
-# which is whether the app starts.
-if [ -e "$HOME/ham-rn/node_modules" ]; then
-  rm -rf "$WORK/node_modules"
-  ln -s "$HOME/ham-rn/node_modules" "$WORK/node_modules"
-else
-  echo "  installing node dependencies (first run on this machine)"
-  (cd "$WORK" && pnpm install --frozen-lockfile) || { echo "  pnpm install failed"; exit 1; }
-fi
+# Symlinking the long-lived checkout's copy was tried and is wrong: that tree
+# drifts behind pnpm-lock.yaml, and Metro then fails to resolve a dependency the
+# lockfile names -- "Module does not exist in the Haste module map" for
+# @babel/runtime, with nothing in the message pointing at the symlink. A stale
+# tree is a much worse failure than a slow install.
+#
+# pnpm's content-addressable store is what makes installing here cheap: with the
+# lockfile unchanged it links from the local store and takes seconds, and it is
+# the same store the build machine already has.
+echo "  installing node dependencies"
+(cd "$WORK" && pnpm install --frozen-lockfile) || { echo "  pnpm install failed"; exit 1; }
 
-# Reuse the Pods tree only while it still matches the lockfile.
+# Pods are reused when they still match, and installed when they do not.
 #
-# CocoaPods runs a build phase that compares Podfile.lock against
-# Pods/Manifest.lock, so a symlinked tree from a checkout with different
-# dependencies fails the build with "Check Pods Manifest.lock" and nothing that
-# points at the cause. Comparing first turns a confusing failure into either a
-# fast reuse or an honest install.
+# CocoaPods runs a build phase comparing Podfile.lock against
+# Pods/Manifest.lock byte for byte, so a symlinked tree from a checkout with
+# different dependencies fails the build with "[CP] Check Pods Manifest.lock"
+# and nothing that names the cause. Comparing first turns a confusing failure
+# into either a fast reuse or an honest install.
 pods_src="$HOME/ham-rn/ios/Pods"
-reuse_pods=0
 if [ -d "$pods_src" ] && [ -f "$WORK/ios/Podfile.lock" ] &&
    [ -f "$pods_src/Manifest.lock" ] &&
    cmp -s "$WORK/ios/Podfile.lock" "$pods_src/Manifest.lock"; then
-  reuse_pods=1
-fi
-
-if [ "$reuse_pods" = "1" ]; then
   rm -rf "$WORK/ios/Pods"
   ln -s "$pods_src" "$WORK/ios/Pods"
 else
@@ -146,7 +136,10 @@ else
   (cd "$WORK/ios" && pod install --no-repo-update) || { echo "  pod install failed"; exit 1; }
 fi
 
-(cd "$WORK" && pnpm embed) >/dev/null 2>&1 || echo "  (embed reported a problem, continuing)"
+# Not swallowed. `pnpm embed` generates the files the app reads at runtime, and
+# a silent failure here used to surface much later as a screen with no data.
+echo "  generating embedded data"
+(cd "$WORK" && pnpm embed) || { echo "  pnpm embed failed"; exit 1; }
 
 APP_DIR="$WORK/ios/build/Products/Release-iphonesimulator/Ham.app"
 DERIVED="$WORK/ios/build/prepush"
@@ -170,7 +163,17 @@ TEAM="$(grep -oE 'DEVELOPMENT_TEAM = [A-Z0-9]{10};' "$WORK/ios/ham-rn.xcodeproj/
 code=$?
 if [ $code -ne 0 ]; then
   echo "  BUILD FAILED (exit $code)"
-  grep -E 'error:|Unable to resolve|BUILD FAILED' "$LOG" | head -12 | sed 's/^/    /'
+  # Print the end of the log rather than matching on error strings.
+  #
+  # A pattern list is the wrong tool: a Metro resolution failure, a CocoaPods
+  # manifest mismatch and a compile error all announce themselves differently,
+  # and the patterns that catch them also match thousands of characters of
+  # compiler flags. The tail of the log is where the reason actually is, and it
+  # is short enough to read. Lines are cut because a single xcodebuild line runs
+  # to several thousand characters.
+  echo "  --- 最后 40 行 ---"
+  tail -40 "$LOG" | cut -c1-200 | sed 's/^/    /'
+  echo "  --- 完整日志: $LOG ---"
   exit 1
 fi
 [ -d "$APP_DIR" ] || { echo "  $APP_DIR was not produced"; exit 1; }

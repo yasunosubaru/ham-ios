@@ -2,3 +2,19 @@
 /.yarn/releases/*    binary
 /.yarn/plugins/**/*  binary
 /.pnp.*              binary linguist-generated
+
+# Anything a shell executes has to stay LF, on every platform.
+#
+# core.autocrlf=true is the default on Windows, and it applies to checkout *and*
+# to `git archive` on export. So a .sh committed from Windows reaches a macOS or
+# Linux machine as CRLF and fails to parse -- at `case ... in`, or at
+# `set -o pipefail`, with a message that points nowhere near the cause. It also
+# silently breaks the husky hooks, which have no extension to key off.
+#
+# This is not hypothetical: the pre-push gate's own script was committed from
+# Windows, arrived on the Mac with 170 stray CR bytes, and reported a syntax
+# error 11 lines above the real problem.
+*.sh            text eol=lf
+*.bash          text eol=lf
+.husky/pre-*    text eol=lf
+scripts/*.sh    text eol=lf

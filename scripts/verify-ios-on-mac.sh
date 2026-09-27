@@ -141,13 +141,32 @@ fi
 echo "  generating embedded data"
 (cd "$WORK" && pnpm embed) || { echo "  pnpm embed failed"; exit 1; }
 
-APP_DIR="$WORK/ios/build/Products/Release-iphonesimulator/Ham.app"
 DERIVED="$WORK/ios/build/prepush"
+
+# Ask the build system where the product lands rather than assuming.
+#
+# With -derivedDataPath set, products sit under that path; without it they go to
+# the per-user DerivedData directory. Hardcoding either one is how a successful
+# build gets reported as "Ham.app was not produced" -- which is what an earlier
+# version of this script did, with a path left over from a different script.
+settings="$(cd "$WORK/ios" && xcodebuild \
+  -workspace ham-rn.xcworkspace \
+  -scheme ham-rn \
+  -sdk iphonesimulator \
+  -configuration Release \
+  -derivedDataPath "$DERIVED" \
+  -showBuildSettings 2>/dev/null)"
+products="$(printf '%s\n' "$settings" | awk -F' = ' '/^[[:space:]]*BUILT_PRODUCTS_DIR/ {print $2; exit}')"
+product="$(printf '%s\n' "$settings" | awk -F' = ' '/^[[:space:]]*FULL_PRODUCT_NAME/ {print $2; exit}')"
+if [ -z "$products" ] || [ -z "$product" ]; then
+  echo "  could not read BUILT_PRODUCTS_DIR / FULL_PRODUCT_NAME from xcodebuild"
+  exit 1
+fi
+APP_DIR="$products/$product"
+echo "  product will be at $APP_DIR"
 
 # --- build -----------------------------------------------------------------
 echo "  building (unsigned Release, simulator)"
-TEAM="$(grep -oE 'DEVELOPMENT_TEAM = [A-Z0-9]{10};' "$WORK/ios/ham-rn.xcodeproj/project.pbxproj" 2>/dev/null |
-        head -1 | sed -E 's/.*= ([A-Z0-9]{10});/\1/')"
 # Unsigned on purpose: a signed build embeds the Apple Team ID, and this gate
 # exists to check that the app runs, not to produce a distributable.
 (cd "$WORK/ios" && xcodebuild \
